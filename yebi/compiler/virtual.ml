@@ -21,7 +21,7 @@ let rec g env = function
   | Closure.Float f ->
       let l = try fst (List.find (fun (_, f') -> f = f') !data)
               with Not_found ->
-                let l = Id.L (Id.genid "l") in
+                let l = Id.L (Id.genid "flt") in
                 data := (l, f) :: !data; l in
       let x = Id.genid "l" in
       Let ((x, Type.Int), MovL l, Ans (Ld (x, 0)))
