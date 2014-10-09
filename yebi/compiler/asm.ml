@@ -36,9 +36,11 @@ let seq (e1, e2) = Let ((Id.gentmp Type.Unit, Type.Unit), e1, e2)
 
 let regs = Array.init 12 (fun i -> Printf.sprintf "$%d" (i + 1))
 let allregs = Array.to_list regs
+
+let reg_sp = "$sp" (* stack pointer *)
+let reg_bp = "$bp" (* base pointer *)
 let reg_cl = regs.(Array.length regs - 1) (* closure address *)
 let reg_sw = regs.(Array.length regs - 2) (* temporary for swap *)
-let reg_sp = "$14" (* stack pointer *)
 
 let is_reg x = (x.[0] = '$')
 
