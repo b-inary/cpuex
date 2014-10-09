@@ -1,8 +1,9 @@
 min-caml
+lexer.ml
+parser.ml
+parser.mli
 *.cmi
 *.cmo
 *.cmx
 *.o
-lexer.ml
-parser.ml
-parser.mli
+._*/

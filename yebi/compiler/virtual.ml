@@ -52,19 +52,23 @@ let rec g env = function
       let (offset, store_fv) =
         expand (List.map (fun y -> (y, M.find y env)) ys) (1, e2')
                (fun y _ offset store_fv -> seq (St (y, x, offset), store_fv)) in
-      Let ((x, t), Mov reg_hp,
-           Let ((reg_hp, Type.Int), Addi (reg_hp, offset),
-                let z = Id.genid "l" in
-                Let ((z, Type.Int), MovL l, seq (St (z, x, 0), store_fv))))
+      let y = Id.genid "l" in
+      let z = Id.genid "l" in
+      Let ((x, t), Ld ("$0", 0x4000),
+      Let ((y, Type.Int), Addi (x, offset),
+      seq (St (y, "$0", 0x4000),
+      Let ((z, Type.Int), MovL l, seq (St (z, x, 0), store_fv)))))
   | Closure.AppCls (x, ys) -> Ans (CallCls (x, ys))
   | Closure.AppDir (x, ys) -> Ans (CallDir (x, ys))
   | Closure.Tuple xs ->
       let y = Id.genid "t" in
+      let z = Id.genid "t" in
       let (offset, store) =
         expand (List.map (fun x -> (x, M.find x env)) xs) (0, Ans (Mov y))
                (fun x _ offset store -> seq (St (x, y, offset), store)) in
-      Let ((y, Type.Tuple (List.map (fun x -> M.find x env) xs)), Mov reg_hp,
-           Let ((reg_hp, Type.Int), Addi (reg_hp, offset), store))
+      Let ((y, Type.Tuple (List.map (fun x -> M.find x env) xs)), Ld ("$0", 0x4000),
+      Let ((z, Type.Int), Addi (y, offset),
+      seq (St (z, "$0", 0x4000), store)))
   | Closure.LetTuple (xts, y, e2) ->
       let s = Closure.fv e2 in
       let (offset, load) =
