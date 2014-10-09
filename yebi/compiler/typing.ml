@@ -7,6 +7,8 @@ exception Error of t * Type.t * Type.t
 
 let extenv = ref M.empty
 
+let lv = ref 1
+
 (* for pretty printing (and type normalization) *)
 (* 型変数を中身でおきかえる関数 *)
 let rec deref_typ = function
@@ -14,7 +16,7 @@ let rec deref_typ = function
   | Type.Tuple ts      -> Type.Tuple (List.map deref_typ ts)
   | Type.Array t       -> Type.Array (deref_typ t)
   | Type.Var ({ contents = None } as r) ->
-      Format.eprintf "uninstantiated type variable detected; assuming int@.";
+      if !lv >= 3 then Format.eprintf "[info] uninstantiated type variable detected; assuming int@.";
       r := Some(Type.Int);
       Type.Int
   | Type.Var ({ contents = Some(t) } as r) ->
@@ -119,7 +121,7 @@ let rec g env e =
       | Var x when M.mem x env     -> M.find x env
       | Var x when M.mem x !extenv -> M.find x !extenv
       | Var x ->
-          Format.eprintf "free variable %s assumed as external@." x;
+          if !lv >= 0 then Format.eprintf "[info] free variable %s assumed as external@." x;
           let t = Type.gentyp () in
           extenv := M.add x t !extenv;
           t

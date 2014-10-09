@@ -15,9 +15,7 @@ let expand xts ini it =
 (* 式の仮想マシンコード生成 *)
 let rec g env = function
   | Closure.Unit -> Ans Nop
-  | Closure.Int i ->
-      if abs i >= 32768 then failwith (Printf.sprintf "too big integer constant: %d" i) else
-      Ans (Li i)
+  | Closure.Int i -> Ans (Li i)
   | Closure.Float f ->
       let l = try fst (List.find (fun (_, f') -> f = f') !data)
               with Not_found ->

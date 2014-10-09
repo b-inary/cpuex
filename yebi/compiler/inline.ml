@@ -22,7 +22,7 @@ let rec g env = function
       LetRec ({ name = (x, t); args = yts; body = g env e1}, g env e2)
   | App (x, ys) when M.mem x env ->
       let (zs, e) = M.find x env in
-      Format.eprintf "inlining %s@." x;
+      if !Typing.lv >= 2 then Format.eprintf "[info] inlining %s@." x;
       let env' = List.fold_left2
         (fun env' (z, t) y -> M.add z y env')
         M.empty zs ys in

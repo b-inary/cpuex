@@ -82,8 +82,7 @@ let rec g env known = function
       let (known', e1') =
         if S.is_empty zs then (known', e1') else
         (* 駄目だったら状態(toplevelの値)を戻して、クロージャ変換をやり直す *)
-        (Format.eprintf "free variable(s) %s found in function %s@." (Id.pp_list (S.elements zs)) x;
-         Format.eprintf "function %s cannot be directly applied in fact@." x;
+        (if !Typing.lv >= 1 then Format.eprintf "[info] free variable(s) %s found in function %s@." (Id.pp_list (S.elements zs)) x;
          toplevel := toplevel_backup;
          let e1' = g (M.add_list yts env') known e1 in
          (known, e1')) in
@@ -94,9 +93,9 @@ let rec g env known = function
       if S.mem x (fv e2') then (* xが変数としてe2'に出現するか *)
         MakeCls ((x, t), { entry = Id.L x; actual_fv = zs }, e2') (* 出現していたら削除しない *)
       else
-        (Format.eprintf "eliminating closure(s) %s@." x; e2') (* 出現しなければMakeClsを削除 *)
+        (if !Typing.lv >= 1 then Format.eprintf "[info] eliminating closure(s) %s@." x; e2') (* 出現しなければMakeClsを削除 *)
   | KNormal.App (x, ys) when S.mem x known ->
-      Format.eprintf "directly applying %s@." x;
+      if !Typing.lv >= 1 then Format.eprintf "[info] directly applying %s@." x;
       AppDir (Id.L x, ys)
   | KNormal.App (f, xs) -> AppCls (f, xs)
   | KNormal.Tuple xs -> Tuple xs

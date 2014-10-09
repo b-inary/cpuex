@@ -22,7 +22,7 @@ let rec g env = function
   | Let ((x, t), e1, e2) ->
       (match g env e1 with
         | Var(y) ->
-            Format.eprintf "beta-reducing %s = %s@." x y;
+            if !Typing.lv >= 2 then Format.eprintf "[info] beta-reducing %s = %s@." x y;
             g (M.add x y env) e2
         | e1' -> let e2' = g env e2 in Let((x, t), e1', e2'))
   | LetRec ({ name = xt; args = yts; body = e1 }, e2) ->

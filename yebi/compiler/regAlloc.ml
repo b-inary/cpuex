@@ -62,7 +62,7 @@ let rec alloc dest cont regenv x t =
     (* Format.eprintf "allocated %s to %s@." x r; *)
     Alloc r
   with Not_found ->
-    Format.eprintf "register allocation failed for %s@." x;
+    if !Typing.lv >= 2 then Format.eprintf "[info] register allocation failed for %s@." x;
     (* レジスタ変数を探す *)
     let y = List.find
               (fun y ->
@@ -70,7 +70,7 @@ let rec alloc dest cont regenv x t =
                 try List.mem (M.find y regenv) all
                 with Not_found -> false)
               (List.rev free) in
-    Format.eprintf "spilling %s from %s@." y (M.find y regenv);
+    if !Typing.lv >= 3 then Format.eprintf "[info] spilling %s from %s@." y (M.find y regenv);
     Spill(y)
 
 (* auxiliary function for g and g'_and_restore *)
@@ -179,9 +179,8 @@ let h { name = Id.L x; args = ys; body = e; ret = t } =
   let (e', regenv') = g (a, t) (Ans (Mov a)) regenv e in
   { name = Id.L x; args = arg_regs; body = e'; ret = t }
 
-(* プログラム全体のレジスタ割り当て (caml2html: regalloc_f) *)
+(* プログラム全体のレジスタ割り当て *)
 let f (Prog (data, fundefs, e)) =
-  Format.eprintf "register allocation: may take some time (up to a few minutes, depending on the size of functions)@.";
   let fundefs' = List.map h fundefs in
   let (e', regenv') = g (Id.gentmp Type.Unit, Type.Unit) (Ans Nop) M.empty e in
   Prog (data, fundefs', e')

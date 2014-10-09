@@ -97,7 +97,7 @@ and g' oc = function
       Printf.fprintf oc "    b       %s\n" x;
   | (NonTail a, CallCls (x, ys)) ->
       g'_args oc [(x, reg_cl)] ys;
-      Printf.fprintf oc "    ld      %s, [%s + 0],\n" reg_sw reg_cl;
+      Printf.fprintf oc "    ld      %s, [%s + 0]\n" reg_sw reg_cl;
       Printf.fprintf oc "    call    %s\n" reg_sw;
       if List.mem a allregs && a <> regs.(0) then
         Printf.fprintf oc "    mov     %s, %s\n" a regs.(0)
@@ -147,7 +147,6 @@ let h oc { name = Id.L x; args = _; body = e; ret = _ } =
   g oc (Tail, e)
 
 let f oc (Prog (data, fundefs, e)) =
-  Format.eprintf "generating assembly...@.";
   Printf.fprintf oc ".float_table\n";
   List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-11s %.15g\n" (x ^ ":") f) data;
   Printf.fprintf oc ".program\n";
