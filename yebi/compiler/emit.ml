@@ -4,7 +4,7 @@ open Asm
 (* すでにSaveされた変数の集合 *)
 let stackset = ref S.empty
 
-(* Saveされた変数の、スタックにおける位置 (caml2html: emit_stackmap) *)
+(* Saveされた変数の、スタックにおける位置 *)
 let stackmap = ref []
 
 let save x =
@@ -30,11 +30,8 @@ let rec shuffle sw xys =
   match List.partition (fun (_, y) -> List.mem_assoc y xys) xys with
     | [], [] -> []
     | (x, y) :: xys, [] -> (* no acyclic moves; resolve a cyclic move *)
-        (y, sw) :: (x, y) :: shuffle sw (List.map
-                                          (function
-                                            | (y', z) when y = y' -> (sw, z)
-                                            | yz -> yz)
-                                          xys)
+        (y, sw) :: (x, y) ::
+        shuffle sw (List.map (function (y', z) when y = y' -> (sw, z) | yz -> yz) xys)
     | (xys, acyc) -> acyc @ shuffle sw xys
 
 (* 末尾かどうかを表すデータ型 *)
@@ -116,7 +113,7 @@ and g' oc = function
         Printf.fprintf oc "    mov     %s, %s\n" a regs.(0)
 
 and g'_tail_if oc x y e1 e2 b =
-  let b_else = Id.genid (b ^ "_else") in
+  let b_else = Id.genid b in
   Printf.fprintf oc "    %-3s     %s, %s, %s\n" b x y b_else;
   let stackset_back = !stackset in
   g oc (Tail, e1);
@@ -125,7 +122,7 @@ and g'_tail_if oc x y e1 e2 b =
   g oc (Tail, e2)
 
 and g'_non_tail_if oc dest x y e1 e2 b =
-  let b_else = Id.genid (b ^ "_else") in
+  let b_else = Id.genid b in
   let b_cont = Id.genid (b ^ "_cont") in
   Printf.fprintf oc "    %-3s     %s, %s, %s\n" b x y b_else;
   let stackset_back = !stackset in
@@ -155,11 +152,11 @@ let h oc { name = Id.L x; args = _; body = e; ret = _ } =
   g oc (Tail, e)
 
 let f oc (Prog (data, fundefs, e)) =
-  Printf.fprintf oc ".float_table\n";
-  List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-11s %.15g\n" (x ^ ":") f) (List.rev data);
-  Printf.fprintf oc ".program\n";
+  Printf.fprintf oc ".data\n";
+  List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-11s .float  %.15g\n" (x ^ ":") f) (List.rev data);
+  Printf.fprintf oc ".text\n";
   List.iter (fun fundef -> h oc fundef) fundefs;
-  Printf.fprintf oc ".main:\n";
+  Printf.fprintf oc ".global main\nmain:\n";
   stackset := S.empty;
   stackmap := [];
   g oc (NonTail("$0"), e);
