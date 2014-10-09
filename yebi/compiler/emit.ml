@@ -51,19 +51,20 @@ let rec g oc = function
 and g' oc = function
   (* 末尾でなかったら計算結果をdestにセット *)
   | (NonTail _, Nop) -> ()
-  | (NonTail x, Li i)          -> Printf.fprintf oc "    li      %s, %d\n" x i
-  | (NonTail x, MovL (Id.L y)) -> Printf.fprintf oc "    laddr   %s, %s\n" x y
+  | (NonTail x, Li i)           -> Printf.fprintf oc "    li      %s, %d\n" x i
+  | (NonTail x, MovL (Id.L y))  -> Printf.fprintf oc "    laddr   %s, %s\n" x y
   | (NonTail x, Mov y) when x = y -> ()
-  | (NonTail x, Mov y)         -> Printf.fprintf oc "    mov     %s, %s\n" x y
-  | (NonTail x, Neg y)         -> Printf.fprintf oc "    neg     %s, %s\n" x y
-  | (NonTail x, Add (y, z))    -> Printf.fprintf oc "    add     %s, %s, %s\n" x y z
-  | (NonTail x, Sub (y, z))    -> Printf.fprintf oc "    sub     %s, %s, %s\n" x y z
-  | (NonTail x, Addi (y, z))   -> Printf.fprintf oc "    addi    %s, %s, %d\n" x y z
-  | (NonTail x, Ld (y, z))     -> Printf.fprintf oc "    ld      %s, [%s + %d]\n" x y z
-  | (NonTail _, St (x, y, z))  -> Printf.fprintf oc "    st      %s, [%s + %d]\n" x y z
-  | (NonTail x, FNeg y)        -> Printf.fprintf oc "    fneg    %s, %s\n" x y
-  | (NonTail x, FAdd (y, z))   -> Printf.fprintf oc "    fadd    %s, %s, %s\n" x y z
-  | (NonTail x, FMul (y, z))   -> Printf.fprintf oc "    fmul    %s, %s, %s\n" x y z
+  | (NonTail x, Mov y)          -> Printf.fprintf oc "    mov     %s, %s\n" x y
+  | (NonTail x, Neg y)          -> Printf.fprintf oc "    neg     %s, %s\n" x y
+  | (NonTail x, Add (y, z))     -> Printf.fprintf oc "    add     %s, %s, %s\n" x y z
+  | (NonTail x, Addi (y, z))    -> Printf.fprintf oc "    addi    %s, %s, %d\n" x y z
+  | (NonTail x, Add4 (y, z, w)) -> Printf.fprintf oc "    add4    %s, %s, %s, %d\n" x y z w
+  | (NonTail x, Sub (y, z))     -> Printf.fprintf oc "    sub     %s, %s, %s\n" x y z
+  | (NonTail x, Ld (y, z))      -> Printf.fprintf oc "    ld      %s, [%s + %d]\n" x y z
+  | (NonTail _, St (x, y, z))   -> Printf.fprintf oc "    st      %s, [%s + %d]\n" x y z
+  | (NonTail x, FNeg y)         -> Printf.fprintf oc "    fneg    %s, %s\n" x y
+  | (NonTail x, FAdd (y, z))    -> Printf.fprintf oc "    fadd    %s, %s, %s\n" x y z
+  | (NonTail x, FMul (y, z))    -> Printf.fprintf oc "    fmul    %s, %s, %s\n" x y z
   | (NonTail _, Push (x, y)) when List.mem x allregs && not (S.mem y !stackset) ->
       save y; Printf.fprintf oc "    st      %s, [%s - %d]\n" x reg_sp (offset y)
   | (NonTail _, Push (x, y)) -> assert (S.mem y !stackset); ()
@@ -74,7 +75,7 @@ and g' oc = function
   | (Tail, (Nop | St _ | Push _ as exp)) ->
       g' oc (NonTail (Id.gentmp Type.Unit), exp);
       Printf.fprintf oc "    ret\n";
-  | (Tail, (Li _ | Mov _ | MovL _ | Neg _ | Add _ | Sub _ | Addi _ | Ld _ | FNeg _ | FAdd _ | FMul _ as exp)) ->
+  | (Tail, (Li _ | Mov _ | MovL _ | Neg _ | Add _ | Addi _ | Add4 _ | Sub _ | Ld _ | FNeg _ | FAdd _ | FMul _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);
       Printf.fprintf oc "    ret\n";
   | (Tail, (Pop x as exp)) ->
@@ -82,10 +83,10 @@ and g' oc = function
         | [i] -> g' oc (NonTail (regs.(0)), exp)
         | _ -> assert false);
       Printf.fprintf oc "    ret\n";
-  | (Tail, IfEq (x, y, e1, e2)) -> g'_tail_if oc x y e1 e2 "be" "bne"
-  | (Tail, IfLE (x, y, e1, e2)) -> g'_tail_if oc x y e1 e2 "ble" "bg"
-  | (NonTail z, IfEq (x, y, e1, e2)) -> g'_non_tail_if oc (NonTail z) x y e1 e2 "be" "bne"
-  | (NonTail z, IfLE (x, y, e1, e2)) -> g'_non_tail_if oc (NonTail z) x y e1 e2 "ble" "bg"
+  | (Tail, IfEq (x, y, e1, e2)) -> g'_tail_if oc x y e1 e2 "bne"
+  | (Tail, IfLE (x, y, e1, e2)) -> g'_tail_if oc x y e1 e2 "bg"
+  | (NonTail z, IfEq (x, y, e1, e2)) -> g'_non_tail_if oc (NonTail z) x y e1 e2 "bne"
+  | (NonTail z, IfLE (x, y, e1, e2)) -> g'_non_tail_if oc (NonTail z) x y e1 e2 "bg"
   (* 関数呼び出しの仮想命令の実装 *)
   | (Tail, CallCls (x, ys)) -> (* 末尾呼び出し *)
       g'_args oc [(x, reg_cl)] ys;
@@ -106,19 +107,19 @@ and g' oc = function
       if List.mem a allregs && a <> regs.(0) then
         Printf.fprintf oc "    mov     %s, %s\n" a regs.(0)
 
-and g'_tail_if oc x y e1 e2 b bn =
+and g'_tail_if oc x y e1 e2 b =
   let b_else = Id.genid (b ^ "_else") in
-  Printf.fprintf oc "    %-3s     %s, %s, %s\n" bn x y b_else;
+  Printf.fprintf oc "    %-3s     %s, %s, %s\n" b x y b_else;
   let stackset_back = !stackset in
   g oc (Tail, e1);
   Printf.fprintf oc "%s:\n" b_else;
   stackset := stackset_back;
   g oc (Tail, e2)
 
-and g'_non_tail_if oc dest x y e1 e2 b bn =
+and g'_non_tail_if oc dest x y e1 e2 b =
   let b_else = Id.genid (b ^ "_else") in
   let b_cont = Id.genid (b ^ "_cont") in
-  Printf.fprintf oc "    %-3s     %s, %s, %s\n" bn x y b_else;
+  Printf.fprintf oc "    %-3s     %s, %s, %s\n" b x y b_else;
   let stackset_back = !stackset in
   g oc (dest, e1);
   let stackset1 = !stackset in

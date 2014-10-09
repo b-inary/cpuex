@@ -6,9 +6,11 @@ type t =
   | Unit
   | Int of int
   | Float of float
-  | Add of Id.t * Id.t
-  | Sub of Id.t * Id.t
   | Neg of Id.t
+  | Add of Id.t * Id.t
+  | Addi of Id.t * int
+  | Add4 of Id.t * Id.t * int
+  | Sub of Id.t * Id.t
   | FNeg of Id.t
   | FAdd of Id.t * Id.t
   | FMul of Id.t * Id.t
@@ -27,29 +29,11 @@ type t =
 and fundef =
   { name: Id.t * Type.t; args: (Id.t * Type.t) list; body: t }
 
-(*let rec t_to_str = function
-  | Unit -> "Unit"
-  | Int i -> Printf.sprintf "(Int %d)" i
-  | Float f -> Printf.sprintf "(Float %f)" f
-  | Add (a, b) -> Printf.sprintf "(Add %s %s)" a b
-  | Sub (a, b) -> Printf.sprintf "(Sub %s %s)" a b
-  | Neg a  -> Printf.sprintf "(Neg %s)" a
-  | FNeg a -> Printf.sprintf "(FNeg %s)" a
-  | FAdd (a, b) -> Printf.sprintf "(FAdd %s %s)" a b
-  | FMul (a, b) -> Printf.sprintf "(FMul %s %s)" a b
-  | IfEq (a, b, c, d) -> Printf.sprintf "(IfEq %s %s %s %s)" a b (t_to_str c) (t_to_str d)
-  | IfLE (a, b, c, d) -> Printf.sprintf "(IfLE %s %s %s %s)" a b (t_to_str c) (t_to_str d)
-  | Let ((a, b), c, d) -> Printf.sprintf "(Let %s %s %s)" a (t_to_str c) (t_to_str d)
-  | Var a -> Printf.sprintf "(Var %s)" a
-  | App (a, b) -> Printf.sprintf "(App %s %s)" a (Id.pp_list b)
-  | Tuple a -> Printf.sprintf "(Tuple %s)" (Id.pp_list a)
-  | ExtFunApp (a, b) -> Printf.sprintf "(ExtFunApp %s %s)" a (Id.pp_list b)*)
-
 (* 式に出現する自由変数 *)
 let rec fv = function
   | Unit | Int _ | Float _ | ExtArray _ -> S.empty
-  | Neg x | FNeg x -> S.singleton x
-  | Add (x, y) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Get (x, y) -> S.of_list [x; y]
+  | Neg x | FNeg x | Addi (x, _) -> S.singleton x
+  | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Get (x, y) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2) | IfLE (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | Let ((x, t), e1, e2) -> S.union (fv e1) (S.remove x (fv e2))
   | Var x -> S.singleton x

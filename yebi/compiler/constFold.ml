@@ -10,10 +10,22 @@ let memf x env =
 let memt x env =
   try (match M.find x env with Tuple _ -> true | _ -> false)
   with Not_found -> false
+let memadd x env =
+  try (match M.find x env with Add _ -> true | _ -> false)
+  with Not_found -> false
+let memaddi x env =
+  try (match M.find x env with Addi _ -> true | _ -> false)
+  with Not_found -> false
+let memadd4 x env =
+  try (match M.find x env with Add4 _ -> true | _ -> false)
+  with Not_found -> false
 
-let findi x env = (match M.find x env with Int i -> i | _ -> raise Not_found)
-let findf x env = (match M.find x env with Float d  -> d | _ -> raise Not_found)
-let findt x env = (match M.find x env with Tuple ys  -> ys | _ -> raise Not_found)
+let findi x env = (match M.find x env with Int   i -> i | _ -> raise Not_found)
+let findf x env = (match M.find x env with Float d -> d | _ -> raise Not_found)
+let findt x env = (match M.find x env with Tuple ys -> ys | _ -> raise Not_found)
+let findadd  x env = (match M.find x env with Add  (a, b) -> (a, b) | _ -> raise Not_found)
+let findaddi x env = (match M.find x env with Addi (a, b) -> (a, b) | _ -> raise Not_found)
+let findadd4 x env = (match M.find x env with Add4 (a, b, c) -> (a, b, c) | _ -> raise Not_found)
 
 (* 定数畳み込みルーチン本体 *)
 (* [b-inary] 浮動小数点数の畳み込みは怪しいけど良いのかな...? *)
@@ -22,8 +34,21 @@ let rec g env = function
   (* | Var(x) when memf x env -> Float (findf x env) *) 
   (* | Var(x) when memt x env -> Tuple (findt x env) *)
   | Neg x when memi x env -> Int (- (findi x env))
-  | Add (x, y) when memi x env && memi y env -> Int (findi x env + findi y env)
+  | Add  (x, y) when memi x env && memi y env -> Int (findi x env + findi y env)
+  | Addi (x, y) when memi x env -> Int (findi x env + y)
+  | Add  (x, y) when memi x env -> Addi (y, findi x env)
+  | Add  (x, y) when memi y env -> Addi (x, findi y env)
+  | Add4 (x, y, z) when memi x env -> Addi (y, findi x env + z)
+  | Add4 (x, y, z) when memi y env -> Addi (x, findi y env + z)
+  | Add  (x, y) when memaddi x env -> let (a, b) = findaddi x env in Add4 (a, y, b)
+  | Add  (x, y) when memaddi y env -> let (a, b) = findaddi y env in Add4 (x, a, b)
+  | Addi (x, y) when memadd  x env -> let (a, b) = findadd  x env in Add4 (a, b, y)
+  | Addi (x, y) when memaddi x env -> let (a, b) = findaddi x env in Addi (a, b + y)
+  | Addi (x, y) when memadd4 x env -> let (a, b, c) = findadd4 x env in Add4 (a, b, c + y)
+  | Add4 (x, y, z) when memaddi x env -> let (a, b) = findaddi x env in Add4 (a, y, b + z)
+  | Add4 (x, y, z) when memaddi y env -> let (a, b) = findaddi y env in Add4 (x, a, b + z)
   | Sub (x, y) when memi x env && memi y env -> Int (findi x env - findi y env)
+  | Sub (x, y) when memi y env -> Addi (x, - (findi y env))
   | FNeg x when memf x env -> Float (-. (findf x env))
   | FAdd (x, y) when memf x env && memf y env -> Float (findf x env +. findf y env)
   | FMul (x, y) when memf x env && memf y env -> Float (findf x env *. findf y env)

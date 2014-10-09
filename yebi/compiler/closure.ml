@@ -8,6 +8,8 @@ type t =
   | Float of float
   | Neg of Id.t
   | Add of Id.t * Id.t
+  | Addi of Id.t * int
+  | Add4 of Id.t * Id.t * int
   | Sub of Id.t * Id.t
   | FNeg of Id.t
   | FAdd of Id.t * Id.t
@@ -35,8 +37,8 @@ type prog = Prog of fundef list * t
 
 let rec fv = function
   | Unit | Int _ | Float _  | ExtArray _ -> S.empty
-  | Neg x | FNeg x -> S.singleton x
-  | Add (x, y) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Get (x, y) -> S.of_list [x; y]
+  | Neg x | Addi (x, _) | FNeg x -> S.singleton x
+  | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Get (x, y) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2)| IfLE (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | Let ((x, t), e1, e2) -> S.union (fv e1) (S.remove x (fv e2))
   | Var x -> S.singleton x
@@ -54,6 +56,8 @@ let rec g env known = function
   | KNormal.Int   i -> Int i
   | KNormal.Float d -> Float d
   | KNormal.Add (x, y) -> Add (x, y)
+  | KNormal.Addi (x, y) -> Addi (x, y)
+  | KNormal.Add4 (x, y, z) -> Add4 (x, y, z)
   | KNormal.Sub (x, y) -> Sub (x, y)
   | KNormal.Neg  x -> Neg x
   | KNormal.FNeg x -> FNeg x

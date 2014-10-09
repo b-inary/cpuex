@@ -10,8 +10,10 @@ let rec g env = function
   | Int   i -> Int i
   | Float d -> Float d
   | Neg x -> Neg (find x env)
-  | Add (x, y) -> Add (find x env, find y env)
-  | Sub (x, y) -> Sub (find x env, find y env)
+  | Add  (x, y) -> Add  (find x env, find y env)
+  | Addi (x, y) -> Addi (find x env, y)
+  | Add4 (x, y, z) -> Add4 (find x env, find y env, z)
+  | Sub  (x, y) -> Sub  (find x env, find y env)
   | FNeg x -> FNeg (find x env)
   | FAdd (x, y) -> FAdd (find x env, find y env)
   | FMul (x, y) -> FMul (find x env, find y env)

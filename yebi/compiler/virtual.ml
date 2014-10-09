@@ -27,6 +27,8 @@ let rec g env = function
       Let ((x, Type.Int), MovL l, Ans (Ld (x, 0)))
   | Closure.Neg x -> Ans (Neg x)
   | Closure.Add (x, y) -> Ans (Add (x, y))
+  | Closure.Addi (x, y) -> Ans (Addi (x, y))
+  | Closure.Add4 (x, y, z) -> Ans (Add4 (x, y, z))
   | Closure.Sub (x, y) -> Ans (Sub (x, y))
   | Closure.FNeg x -> Ans (FNeg x)
   | Closure.FAdd (x, y) -> Ans (FAdd (x, y))
