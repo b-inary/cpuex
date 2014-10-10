@@ -121,7 +121,7 @@ let rec g env e =
       | Var x when M.mem x env     -> M.find x env
       | Var x when M.mem x !extenv -> M.find x !extenv
       | Var x ->
-          if !lv >= 0 then Format.eprintf "[info] free variable %s assumed as external@." x;
+          if !lv >= 0 then Format.eprintf "[info] %s: assumed as external@." x;
           let t = Type.gentyp () in
           extenv := M.add x t !extenv;
           t

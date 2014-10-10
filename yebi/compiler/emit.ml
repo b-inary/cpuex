@@ -38,9 +38,14 @@ let rec shuffle sw xys =
 type dest = Tail | NonTail of Id.t
 
 let addr x y =
-  if y = 0 then Printf.sprintf "[%s]" x else
-  if y > 0 then Printf.sprintf "[%s + %d]" x y else
-  Printf.sprintf "[%s - %d]" x (-y)
+  if x = "$0" then
+    Printf.sprintf "[%d]" y
+  else if y = 0 then
+    Printf.sprintf "[%s]" x
+  else if y > 0 then
+    Printf.sprintf "[%s + %d]" x y
+  else
+    Printf.sprintf "[%s - %d]" x (-y)
 
 (* 命令列のアセンブリ生成 *)
 let rec g oc = function
@@ -65,17 +70,17 @@ and g' oc = function
   | (NonTail x, Addi (y, z))    -> Printf.fprintf oc "    sub     %s, %s, %d\n" x y (-z)
   | (NonTail x, Add4 (y, z, w)) -> Printf.fprintf oc "    add     %s, %s, %s, %d\n" x y z w
   | (NonTail x, Sub (y, z))     -> Printf.fprintf oc "    sub     %s, %s, %s\n" x y z
-  | (NonTail x, Ld (y, z))      -> Printf.fprintf oc "    load    %s, %s\n" x (addr y z)
-  | (NonTail _, St (x, y, z))   -> Printf.fprintf oc "    store   %s, %s\n" x (addr y z)
+  | (NonTail x, Ld (y, z))      -> Printf.fprintf oc "    mov     %s, %s\n" x (addr y z)
+  | (NonTail _, St (x, y, z))   -> Printf.fprintf oc "    mov     %s, %s\n" (addr y z) x
   | (NonTail x, FNeg y)         -> Printf.fprintf oc "    fneg    %s, %s\n" x y
   | (NonTail x, FAdd (y, z))    -> Printf.fprintf oc "    fadd    %s, %s, %s\n" x y z
   | (NonTail x, FMul (y, z))    -> Printf.fprintf oc "    fmul    %s, %s, %s\n" x y z
   | (NonTail _, Push (x, y)) when List.mem x allregs && not (S.mem y !stackset) ->
-      save y; Printf.fprintf oc "    store   %s, %s\n" x (addr reg_bp (- (offset y)))
+      save y; Printf.fprintf oc "    mov     %s, %s\n" (addr reg_bp (- (offset y))) x
   | (NonTail _, Push (x, y)) -> assert (S.mem y !stackset); ()
   | (NonTail x, Pop y) ->
       assert (List.mem x allregs);
-      Printf.fprintf oc "    load    %s, %s\n" x (addr reg_bp (- (offset y)))
+      Printf.fprintf oc "    mov     %s, %s\n" x (addr reg_bp (- (offset y)))
   (* 末尾だったら計算結果を第一レジスタにセットしてret *)
   | (Tail, (Nop | St _ | Push _ as exp)) ->
       g' oc (NonTail (Id.gentmp Type.Unit), exp);
@@ -95,14 +100,14 @@ and g' oc = function
   (* 関数呼び出しの仮想命令の実装 *)
   | (Tail, CallCls (x, ys)) ->
       g'_args oc [(x, reg_cl)] ys;
-      Printf.fprintf oc "    load    %s, [%s]\n" reg_sw reg_cl;
+      Printf.fprintf oc "    mov     %s, [%s]\n" reg_sw reg_cl;
       Printf.fprintf oc "    br      %s\n" reg_sw;
   | (Tail, CallDir (Id.L x, ys)) ->
       g'_args oc [] ys;
       Printf.fprintf oc "    br      %s\n" x;
   | (NonTail a, CallCls (x, ys)) ->
       g'_args oc [(x, reg_cl)] ys;
-      Printf.fprintf oc "    load    %s, [%s]\n" reg_sw reg_cl;
+      Printf.fprintf oc "    mov     %s, [%s]\n" reg_sw reg_cl;
       Printf.fprintf oc "    call    %s\n" reg_sw;
       if List.mem a allregs && a <> regs.(0) then
         Printf.fprintf oc "    mov     %s, %s\n" a regs.(0)
