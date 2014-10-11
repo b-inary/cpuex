@@ -78,20 +78,20 @@ and g' oc = function
   | (NonTail x, FNeg y)         -> Printf.fprintf oc "    fneg    %s, %s\n" x y
   | (NonTail x, FAdd (y, z))    -> Printf.fprintf oc "    fadd    %s, %s, %s\n" x y z
   | (NonTail x, FMul (y, z))    -> Printf.fprintf oc "    fmul    %s, %s, %s\n" x y z
-  | (NonTail _, Push (x, y)) when List.mem x allregs && not (S.mem y !stackset) ->
+  | (NonTail _, Save (x, y)) when List.mem x allregs && not (S.mem y !stackset) ->
       save y; Printf.fprintf oc "    mov     %s, %s\n" (addr reg_bp (- (offset y))) x
-  | (NonTail _, Push (x, y)) -> assert (S.mem y !stackset); ()
-  | (NonTail x, Pop y) ->
+  | (NonTail _, Save (x, y)) -> assert (S.mem y !stackset); ()
+  | (NonTail x, Restore y) ->
       assert (List.mem x allregs);
       Printf.fprintf oc "    mov     %s, %s\n" x (addr reg_bp (- (offset y)))
   (* 末尾だったら計算結果を第一レジスタにセットしてret *)
-  | (Tail, (Nop | St _ | Push _ as exp)) ->
+  | (Tail, (Nop | St _ | Save _ as exp)) ->
       g' oc (NonTail (Id.gentmp Type.Unit), exp);
       Printf.fprintf oc "    ret\n";
   | (Tail, (Li _ | Mov _ | MovL _ | Neg _ | Add _ | Addi _ | Add4 _ | Sub _ | Ld _ | LdL _ | FNeg _ | FAdd _ | FMul _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);
       Printf.fprintf oc "    ret\n";
-  | (Tail, (Pop x as exp)) ->
+  | (Tail, (Restore x as exp)) ->
       (match locate x with
         | [i] -> g' oc (NonTail (regs.(0)), exp)
         | _ -> assert false);
@@ -152,16 +152,17 @@ and g'_args oc x_reg_cl ys =
     (fun (y, r) -> Printf.fprintf oc "    mov     %s, %s\n" r y)
     (shuffle reg_sw yrs)
 
-let h oc { name = Id.L x; args = _; body = e; ret = _ } =
+let h oc { name = Id.L x; args = _; body = e; ret = _; local = c } =
   Printf.fprintf oc ".global %s\n" x;
   Printf.fprintf oc "%s:\n" x;
+  Printf.fprintf oc "    sub     $sp, $sp, %d\n" c;
   stackset := S.empty;
   stackmap := [];
   g oc (Tail, e)
 
 let f oc (Prog (data, fundefs, e)) =
   Printf.fprintf oc ".data\n";
-  List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-11s .float  %.15g\n" (x ^ ":") f) (List.rev data);
+  List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-s:\n            .float  %.15g\n" x f) (List.rev data);
   Printf.fprintf oc ".text\n";
   List.iter (fun fundef -> h oc fundef) fundefs;
   Printf.fprintf oc ".global main\nmain:\n";

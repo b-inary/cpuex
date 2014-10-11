@@ -86,6 +86,8 @@ let find x t regenv =
   try M.find x regenv
   with Not_found -> raise (NoReg (x, t))
 
+let counter = ref 0
+
 (* 命令列のレジスタ割り当て *)
 let rec g dest cont regenv = function
   | Ans exp -> g'_and_restore dest cont regenv exp
@@ -98,7 +100,7 @@ let rec g dest cont regenv = function
             let r = M.find y regenv1 in
             let (e2', regenv2) = g dest cont (add x r (M.remove y regenv1)) e in
             let save =
-              try Push (M.find y regenv, y)
+              try let r' = M.find y regenv in incr counter; Save (r', y)
               with Not_found -> Nop in      
             (seq (save, concat e1' (r, t) e2'), regenv2)
         | Alloc r ->
@@ -110,11 +112,11 @@ and g'_and_restore dest cont regenv exp =
   try g' dest cont regenv exp
   with NoReg (x, t) ->
     ((* Format.eprintf "restoring %s@." x; *)
-     g dest cont regenv (Let ((x, t), Pop x, Ans exp)))
+     g dest cont regenv (Let ((x, t), Restore x, Ans exp)))
 
 (* 各命令のレジスタ割り当て *)
 and g' dest cont regenv = function
-  | Nop | Li _ | MovL _ | LdL _ | Pop _ as exp -> (Ans exp, regenv)
+  | Nop | Li _ | MovL _ | LdL _ | Restore _ as exp -> (Ans exp, regenv)
   | Mov x -> (Ans (Mov (find x Type.Int regenv)), regenv)
   | Neg x -> (Ans (Neg (find x Type.Int regenv)), regenv)
   | Add (x, y) -> (Ans (Add (find x Type.Int regenv, find y Type.Int regenv)), regenv)
@@ -130,7 +132,7 @@ and g' dest cont regenv = function
   | IfLE (x, y, e1, e2) as exp -> g'_if dest cont regenv exp (fun e1' e2' -> IfLE (find x Type.Int regenv, find y Type.Int regenv, e1', e2')) e1 e2
   | CallCls (x, ys) as exp -> g'_call dest cont regenv exp (fun ys -> CallCls (find x Type.Int regenv, ys)) ys
   | CallDir (l, ys) as exp -> g'_call dest cont regenv exp (fun ys -> CallDir (l, ys)) ys
-  | Push (x, y) -> assert false
+  | Save (x, y) -> assert false
 
 (* ifのレジスタ割り当て *)
 and g'_if dest cont regenv exp constr e1 e2 =
@@ -150,7 +152,7 @@ and g'_if dest cont regenv exp constr e1 e2 =
       M.empty (fv cont) in
   (List.fold_left (fun e x ->
                     if x = fst dest || not (M.mem x regenv) || M.mem x regenv' then e else
-                    seq (Push (M.find x regenv, x), e))
+                    (incr counter; seq (Save (M.find x regenv, x), e)))
     (Ans (constr e1' e2')) (fv cont),
   regenv')
 
@@ -159,12 +161,13 @@ and g'_call dest cont regenv exp constr ys =
   (List.fold_left
     (fun e x ->
       if x = fst dest || not (M.mem x regenv) then e else
-      seq (Push (M.find x regenv, x), e))
+      (incr counter; seq (Save (M.find x regenv, x), e)))
     (Ans (constr (List.map (fun y -> find y Type.Int regenv) ys))) (fv cont),
   M.empty)
 
 (* 関数のレジスタ割り当て *)
-let h { name = Id.L x; args = ys; body = e; ret = t } =
+let h { name = Id.L x; args = ys; body = e; ret = t; local = _ } =
+  counter := 0;
   let regenv = M.add x reg_cl M.empty in
   let (i, arg_regs, regenv) =
     List.fold_left
@@ -177,7 +180,7 @@ let h { name = Id.L x; args = ys; body = e; ret = t } =
       | Type.Unit -> Id.gentmp Type.Unit
       | _ -> regs.(0) in
   let (e', regenv') = g (a, t) (Ans (Mov a)) regenv e in
-  { name = Id.L x; args = arg_regs; body = e'; ret = t }
+  { name = Id.L x; args = arg_regs; body = e'; ret = t; local = !counter }
 
 (* プログラム全体のレジスタ割り当て *)
 let f (Prog (data, fundefs, e)) =

@@ -25,10 +25,10 @@ and exp =
   | IfLE of Id.t * Id.t * t * t
   | CallCls of Id.t * Id.t list
   | CallDir of Id.l * Id.t list
-  | Push of Id.t * Id.t
-  | Pop of Id.t
+  | Save of Id.t * Id.t
+  | Restore of Id.t
 
-type fundef = { name: Id.l; args: Id.t list; body: t; ret: Type.t }
+type fundef = { name: Id.l; args: Id.t list; body: t; ret: Type.t; local: int }
 
 (* プログラム全体 = 浮動小数点数テーブル + トップレベル関数 + メインの式 *)
 type prog = Prog of (Id.l * float) list * fundef list * t
@@ -52,8 +52,8 @@ let rec remove_and_uniq xs = function
 
 (* free variables in the order of use (for spilling) *)
 let rec fv_exp = function
-  | Nop | Li _ | MovL _ | LdL _ | Pop _ -> []
-  | Mov x | Neg x | Addi (x, _) | Ld (x, _) | FNeg x | Push (x, _) -> [x]
+  | Nop | Li _ | MovL _ | LdL _ | Restore _ -> []
+  | Mov x | Neg x | Addi (x, _) | Ld (x, _) | FNeg x | Save (x, _) -> [x]
   | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | St (x, y, _) | FAdd (x, y) | FMul (x, y) -> [x; y]
   | IfEq (x, y, e1, e2) | IfLE (x, y, e1, e2) ->
       x :: y :: remove_and_uniq S.empty (fv e1 @ fv e2)
