@@ -16,6 +16,7 @@ and exp =
   | Add4 of Id.t * Id.t * int
   | Sub of Id.t * Id.t
   | Ld of Id.t * int
+  | LdL of Id.l
   | St of Id.t * Id.t * int
   | FNeg of Id.t
   | FAdd of Id.t * Id.t
@@ -51,7 +52,7 @@ let rec remove_and_uniq xs = function
 
 (* free variables in the order of use (for spilling) *)
 let rec fv_exp = function
-  | Nop | Li _ | MovL _ | Pop _ -> []
+  | Nop | Li _ | MovL _ | LdL _ | Pop _ -> []
   | Mov x | Neg x | Addi (x, _) | Ld (x, _) | FNeg x | Push (x, _) -> [x]
   | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | St (x, y, _) | FAdd (x, y) | FMul (x, y) -> [x; y]
   | IfEq (x, y, e1, e2) | IfLE (x, y, e1, e2) ->

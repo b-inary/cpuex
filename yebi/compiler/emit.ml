@@ -73,6 +73,7 @@ and g' oc = function
   | (NonTail x, Add4 (y, z, w)) -> Printf.fprintf oc "    add     %s, %s, %s, %d\n" x y z w
   | (NonTail x, Sub (y, z))     -> Printf.fprintf oc "    sub     %s, %s, %s\n" x y z
   | (NonTail x, Ld (y, z))      -> Printf.fprintf oc "    mov     %s, %s\n" x (addr y z)
+  | (NonTail x, LdL (Id.L y))   -> Printf.fprintf oc "    mov     %s, [%s]\n" x y
   | (NonTail _, St (x, y, z))   -> Printf.fprintf oc "    mov     %s, %s\n" (addr y z) x
   | (NonTail x, FNeg y)         -> Printf.fprintf oc "    fneg    %s, %s\n" x y
   | (NonTail x, FAdd (y, z))    -> Printf.fprintf oc "    fadd    %s, %s, %s\n" x y z
@@ -87,7 +88,7 @@ and g' oc = function
   | (Tail, (Nop | St _ | Push _ as exp)) ->
       g' oc (NonTail (Id.gentmp Type.Unit), exp);
       Printf.fprintf oc "    ret\n";
-  | (Tail, (Li _ | Mov _ | MovL _ | Neg _ | Add _ | Addi _ | Add4 _ | Sub _ | Ld _ | FNeg _ | FAdd _ | FMul _ as exp)) ->
+  | (Tail, (Li _ | Mov _ | MovL _ | Neg _ | Add _ | Addi _ | Add4 _ | Sub _ | Ld _ | LdL _ | FNeg _ | FAdd _ | FMul _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);
       Printf.fprintf oc "    ret\n";
   | (Tail, (Pop x as exp)) ->

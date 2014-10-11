@@ -114,7 +114,7 @@ and g'_and_restore dest cont regenv exp =
 
 (* 各命令のレジスタ割り当て *)
 and g' dest cont regenv = function
-  | Nop | Li _ | MovL _ | Pop _ as exp -> (Ans exp, regenv)
+  | Nop | Li _ | MovL _ | LdL _ | Pop _ as exp -> (Ans exp, regenv)
   | Mov x -> (Ans (Mov (find x Type.Int regenv)), regenv)
   | Neg x -> (Ans (Neg (find x Type.Int regenv)), regenv)
   | Add (x, y) -> (Ans (Add (find x Type.Int regenv, find y Type.Int regenv)), regenv)
