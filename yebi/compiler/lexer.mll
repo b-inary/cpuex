@@ -45,6 +45,15 @@ rule token = parse
 | "<-"    { LESS_MINUS }
 | ';'     { SEMICOLON }
 | eof     { EOF }
+| "fequal"  { FEQUAL }
+| "fless"   { FLESS }
+| "fispos"  { FISPOS }
+| "fisneg"  { FISNEG }
+| "fiszero" { FISZERO }
+| "fhalf"   { FHALF }
+| "fsqr"    { FSQR }
+| "fabs"    { FABS }
+| "fneg"    { FNEG }
 | lower (digit|lower|upper|'_')*
           { IDENT (Lexing.lexeme lexbuf) }
 | _

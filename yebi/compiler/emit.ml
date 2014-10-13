@@ -155,7 +155,7 @@ and g'_args oc x_reg_cl ys =
 let h oc { name = Id.L x; args = _; body = e; ret = _; local = c } =
   Printf.fprintf oc ".global %s\n" x;
   Printf.fprintf oc "%s:\n" x;
-  Printf.fprintf oc "    sub     $sp, $sp, %d\n" c;
+  if c > 0 then Printf.fprintf oc "    sub     $sp, $sp, %d\n" c;
   stackset := S.empty;
   stackmap := [];
   g oc (Tail, e)

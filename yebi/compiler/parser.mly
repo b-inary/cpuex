@@ -33,6 +33,8 @@
 %token SEMICOLON
 %token LPAREN
 %token RPAREN
+%token FEQUAL FLESS FISPOS FISNEG FISZERO
+%token FHALF FSQR FABS FNEG
 %token EOF
 
 /* 優先順位とassociativityの定義 (低い方から高い方へ) */
@@ -67,12 +69,12 @@ simple_exp:
 /* 一般の式 */
 exp:
 | simple_exp                { $1 }
-| NOT exp                  
+| NOT exp
     %prec prec_app          { Not $2 }
-| MINUS exp 
+| MINUS exp
     %prec prec_unary_minus  { match $2 with
                                 | Int   i -> Int (-i)
-                                | Float f -> Float (-.f) 
+                                | Float f -> Float (-.f)
                                 | e -> Neg e }
 | exp PLUS exp              { Add ($1, $3) }
 | exp MINUS exp             { Sub ($1, $3) }
@@ -87,7 +89,7 @@ exp:
 | MINUS_DOT exp
     %prec prec_unary_minus  { FNeg $2 }
 | exp PLUS_DOT exp          { FAdd ($1, $3) }
-| exp MINUS_DOT exp         { FAdd ($1, FNeg($3)) }
+| exp MINUS_DOT exp         { FAdd ($1, FNeg $3) }
 | exp AST_DOT exp           { FMul ($1, $3) }
 | exp SLASH_DOT exp         { App (Var "fdiv", [$1; $3]) }
 | LET IDENT EQUAL exp IN exp
@@ -104,6 +106,24 @@ exp:
 | exp SEMICOLON exp         { Let ((Id.gentmp Type.Unit, Type.Unit), $1, $3) }
 | ARRAY_CREATE simple_exp simple_exp
     %prec prec_app          { Array ($2, $3) }
+| FEQUAL simple_exp simple_exp
+    %prec prec_app          { Eq ($2, $3) }
+| FLESS simple_exp simple_exp
+    %prec prec_app          { Not (LE ($3, $2)) }
+| FISPOS simple_exp
+    %prec prec_app          { Not (LE ($2, Float 0.0)) }
+| FISNEG simple_exp
+    %prec prec_app          { Not (LE (Float 0.0, $2)) }
+| FISZERO simple_exp
+    %prec prec_app          { Eq ($2, Float 0.0) }
+| FHALF simple_exp
+    %prec prec_app          { FMul ($2, Float 0.5) }
+| FSQR simple_exp
+    %prec prec_app          { FMul ($2, $2) }
+| FABS simple_exp
+    %prec prec_app          { If (Not (LE (Float 0.0, $2)), FNeg $2, $2) }
+| FNEG simple_exp
+    %prec prec_app          { FNeg $2 }
 | EOF                       { exit 0 }
 | error
     { failwith

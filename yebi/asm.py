@@ -483,7 +483,7 @@ for line, filename, pos in lines1:
 # 3. assemble
 if not args.o:
     m = re.match(r'(.*)\..*', args.inputs[0])
-    args.o = m.group(1) + '.out' if m else args.inputs[0] + '.out'
+    args.o = '{}.out'.format(m.group(1) if m else args.inputs[0])
 with open(args.o, 'w') as f:
     for line, filename, pos in lines3:
         mnemonic, operands = parse(line)

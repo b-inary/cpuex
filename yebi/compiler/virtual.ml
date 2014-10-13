@@ -90,7 +90,7 @@ let rec g env = function
         | Type.Array _ ->
             Let ((offset, Type.Int), Add (x, y), Ans (St (z, offset, 0)))
         | _ -> assert false)
-  | Closure.ExtArray (Id.L x) -> Ans (MovL (Id.L ("min_caml_" ^ x)))
+  | Closure.ExtArray (Id.L x) -> Ans (MovL (Id.L x))
 
 (* 関数の仮想マシンコード生成 *)
 let h { Closure.name = (Id.L x, t); Closure.args = yts; Closure.formal_fv = zts; Closure.body = e } =
