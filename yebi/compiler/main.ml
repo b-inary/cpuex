@@ -10,7 +10,7 @@ let rec iter n e =
   iter (n - 1) e'
 
 (* バッファをコンパイルしてチャンネルへ出力する *)
-let lexbuf outchan l = 
+let lexbuf outchan l =
   Id.counter := 0;
   Typing.extenv := M.empty;
   Emit.f outchan
@@ -20,12 +20,13 @@ let lexbuf outchan l =
 
 
 (* 文字列をコンパイルして標準出力に表示する *)
-let string s = lexbuf stdout (Lexing.from_string s) 
+let string s = lexbuf stdout (Lexing.from_string s)
 
 (* ファイルをコンパイルしてファイルに出力する *)
 let file f =
-  let inchan = stdin (* open_in (f ^ ".ml") *) in
-  let outchan = stdout (* open_out (f ^ ".s") *) in
+  let inchan = open_in f in
+  let outfile = String.sub f 0 (String.rindex f '.') ^ ".s" in
+  let outchan = open_out outfile in
   try
     lexbuf outchan (Lexing.from_channel inchan);
     close_in inchan;
@@ -40,8 +41,5 @@ let () =
      ("-iter", Arg.Int (fun i -> limit := i), "maximum number of optimizations iterated");
      ("-log", Arg.Int (fun i -> Typing.lv := i), "log level (0 - 3)")]
     (fun s -> files := !files @ [s])
-    (Printf.sprintf "usage: %s [-inline m] [-iter n] [-log n]" Sys.argv.(0));
-  (* List.iter
-    (fun f -> ignore (file f))
-    !files *)
-  file ()
+    (Printf.sprintf "usage: %s [options] file..." Sys.argv.(0));
+  List.iter (fun f -> ignore (file f)) !files
