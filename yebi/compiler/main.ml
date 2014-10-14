@@ -24,9 +24,10 @@ let string s = lexbuf stdout (Lexing.from_string s)
 
 (* ファイルをコンパイルしてファイルに出力する *)
 let file f =
-  let inchan = open_in f in
-  let outfile = String.sub f 0 (String.rindex f '.') ^ ".s" in
-  let outchan = open_out outfile in
+  let (inchan, outchan) =
+    if f = "stdinout" then (stdin, stdout) else
+    let outfile = String.sub f 0 (String.rindex f '.') ^ ".s" in
+    (open_in f, open_out outfile) in
   try
     lexbuf outchan (Lexing.from_channel inchan);
     close_in inchan;
@@ -42,4 +43,5 @@ let () =
      ("-log", Arg.Int (fun i -> Typing.lv := i), "log level (0 - 3)")]
     (fun s -> files := !files @ [s])
     (Printf.sprintf "usage: %s [options] file..." Sys.argv.(0));
+  if !files = [] then file "stdinout" else
   List.iter (fun f -> ignore (file f)) !files

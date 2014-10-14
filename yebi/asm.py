@@ -175,7 +175,7 @@ def on_dot_int(operands):
         error('invalid syntax')
     check_imm_range(imm, -0x80000000, 0xffffffff)
     head = chr((imm >> 24) & 0xff) + chr((imm >> 16) & 0xff)
-    tail = chr((imm >>  8) & 0xff) + chr(imm & 0xff)
+    tail = chr((imm >>  8) & 0xff) + chr( imm        & 0xff)
     return head + tail
 
 def on_dot_float(operands):
@@ -482,7 +482,7 @@ for line, filename, pos in lines1:
 
 # 3. assemble
 if not args.o:
-    m = re.match(r'(.*)\..*', args.inputs[0])
+    m = re.match(r'(.*)\.', args.inputs[0])
     args.o = '{}.out'.format(m.group(1) if m else args.inputs[0])
 with open(args.o, 'w') as f:
     for line, filename, pos in lines3:

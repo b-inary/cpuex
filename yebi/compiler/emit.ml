@@ -166,6 +166,8 @@ let f oc (Prog (data, fundefs, e)) =
   Printf.fprintf oc ".text\n";
   List.iter (fun fundef -> h oc fundef) fundefs;
   Printf.fprintf oc ".global main\nmain:\n";
+  Printf.fprintf oc "    mov     $1, 0x4001\n";
+  Printf.fprintf oc "    mov     [0x4000], $1\n";
   stackset := S.empty;
   stackmap := [];
   g oc (NonTail("$0"), e);

@@ -127,7 +127,7 @@ exp:
 | EOF                       { exit 0 }
 | error
     { failwith
-        (Printf.sprintf "\nparse error near characters %d-%d"
+        (Printf.sprintf "\nerror: parse error near characters %d-%d\n"
           (Parsing.symbol_start ())
           (Parsing.symbol_end ())) }
 

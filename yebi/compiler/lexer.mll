@@ -58,7 +58,7 @@ rule token = parse
           { IDENT (Lexing.lexeme lexbuf) }
 | _
           { failwith
-              (Printf.sprintf "unknown token %s near characters %d-%d"
+              (Printf.sprintf "\nerror: unknown token %s near characters %d-%d\n"
                 (Lexing.lexeme lexbuf)
                 (Lexing.lexeme_start lexbuf)
                 (Lexing.lexeme_end lexbuf)) }
