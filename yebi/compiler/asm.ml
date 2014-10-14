@@ -15,10 +15,12 @@ and exp =
   | Addi of Id.t * int
   | Add4 of Id.t * Id.t * int
   | Sub of Id.t * Id.t
+  | Shift of Id.t * int
   | Ld of Id.t * int
   | LdL of Id.l
   | St of Id.t * Id.t * int
   | FNeg of Id.t
+  | FAbs of Id.t
   | FAdd of Id.t * Id.t
   | FMul of Id.t * Id.t
   | IfEq of Id.t * Id.t * t * t
@@ -53,7 +55,7 @@ let rec remove_and_uniq xs = function
 (* free variables in the order of use (for spilling) *)
 let rec fv_exp = function
   | Nop | Li _ | MovL _ | LdL _ | Restore _ -> []
-  | Mov x | Neg x | Addi (x, _) | Ld (x, _) | FNeg x | Save (x, _) -> [x]
+  | Mov x | Neg x | Addi (x, _) | Shift (x, _) | Ld (x, _) | FNeg x | FAbs x | Save (x, _) -> [x]
   | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | St (x, y, _) | FAdd (x, y) | FMul (x, y) -> [x; y]
   | IfEq (x, y, e1, e2) | IfLE (x, y, e1, e2) ->
       x :: y :: remove_and_uniq S.empty (fv e1 @ fv e2)

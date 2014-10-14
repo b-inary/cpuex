@@ -11,7 +11,9 @@ type t =
   | Addi of Id.t * int
   | Add4 of Id.t * Id.t * int
   | Sub of Id.t * Id.t
+  | Shift of Id.t * int
   | FNeg of Id.t
+  | FAbs of Id.t
   | FAdd of Id.t * Id.t
   | FMul of Id.t * Id.t
   | IfEq of Id.t * Id.t * t * t
@@ -25,6 +27,7 @@ type t =
   | LetTuple of (Id.t * Type.t) list * Id.t * t
   | Get of Id.t * Id.t
   | Put of Id.t * Id.t * Id.t
+  | ExtTuple of Id.l
   | ExtArray of Id.l
 
 type fundef =
@@ -36,8 +39,8 @@ type fundef =
 type prog = Prog of fundef list * t
 
 let rec fv = function
-  | Unit | Int _ | Float _  | ExtArray _ -> S.empty
-  | Neg x | Addi (x, _) | FNeg x -> S.singleton x
+  | Unit | Int _ | Float _  | ExtTuple _ | ExtArray _ -> S.empty
+  | Neg x | Addi (x, _) | Shift (x, _) | FNeg x | FAbs x -> S.singleton x
   | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Get (x, y) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2)| IfLE (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | Let ((x, t), e1, e2) -> S.union (fv e1) (S.remove x (fv e2))
@@ -59,8 +62,10 @@ let rec g env known = function
   | KNormal.Addi (x, y) -> Addi (x, y)
   | KNormal.Add4 (x, y, z) -> Add4 (x, y, z)
   | KNormal.Sub (x, y) -> Sub (x, y)
+  | KNormal.Shift (x, y) -> Shift(x, y)
   | KNormal.Neg  x -> Neg x
   | KNormal.FNeg x -> FNeg x
+  | KNormal.FAbs x -> FAbs x
   | KNormal.FAdd (x, y) -> FAdd (x, y)
   | KNormal.FMul (x, y) -> FMul (x, y)
   | KNormal.IfEq (x, y, e1, e2) -> IfEq (x, y, g env known e1, g env known e2)
@@ -102,6 +107,7 @@ let rec g env known = function
   | KNormal.LetTuple (xts, y, e) -> LetTuple (xts, y, g (M.add_list xts env) known e)
   | KNormal.Get (x, y) -> Get (x, y)
   | KNormal.Put (x, y, z) -> Put (x, y, z)
+  | KNormal.ExtTuple x -> ExtTuple (Id.L x)
   | KNormal.ExtArray x -> ExtArray (Id.L x)
   | KNormal.ExtFunApp (x, ys) -> AppDir (Id.L x, ys)
 

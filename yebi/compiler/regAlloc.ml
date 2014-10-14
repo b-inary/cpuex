@@ -101,7 +101,7 @@ let rec g dest cont regenv = function
             let (e2', regenv2) = g dest cont (add x r (M.remove y regenv1)) e in
             let save =
               try let r' = M.find y regenv in incr counter; Save (r', y)
-              with Not_found -> Nop in      
+              with Not_found -> Nop in
             (seq (save, concat e1' (r, t) e2'), regenv2)
         | Alloc r ->
             let (e2', regenv2) = g dest cont (add x r regenv1) e in
@@ -123,9 +123,11 @@ and g' dest cont regenv = function
   | Addi (x, y) -> (Ans (Addi (find x Type.Int regenv, y)), regenv)
   | Add4 (x, y, z) -> (Ans (Add4 (find x Type.Int regenv, find y Type.Int regenv, z)), regenv)
   | Sub (x, y) -> (Ans (Sub (find x Type.Int regenv, find y Type.Int regenv)), regenv)
+  | Shift (x, y) -> (Ans (Shift (find x Type.Int regenv, y)), regenv)
   | Ld (x, y) -> (Ans (Ld (find x Type.Int regenv, y)), regenv)
   | St (x, y, z) -> (Ans (St (find x Type.Int regenv, find y Type.Int regenv, z)), regenv)
   | FNeg x -> (Ans (FNeg (find x Type.Float regenv)), regenv)
+  | FAbs x -> (Ans (FAbs (find x Type.Float regenv)), regenv)
   | FAdd (x, y) -> (Ans (FAdd (find x Type.Float regenv, find y Type.Float regenv)), regenv)
   | FMul (x, y) -> (Ans (FMul (find x Type.Float regenv, find y Type.Float regenv)), regenv)
   | IfEq (x, y, e1, e2) as exp -> g'_if dest cont regenv exp (fun e1' e2' -> IfEq (find x Type.Int regenv, find y Type.Int regenv, e1', e2')) e1 e2

@@ -72,10 +72,16 @@ and g' oc = function
   | (NonTail x, Addi (y, z))    -> Printf.fprintf oc "    sub     %s, %s, %d\n" x y (-z)
   | (NonTail x, Add4 (y, z, w)) -> Printf.fprintf oc "    add     %s, %s, %s, %d\n" x y z w
   | (NonTail x, Sub (y, z))     -> Printf.fprintf oc "    sub     %s, %s, %s\n" x y z
+  | (NonTail x, Shift (y, z)) when z = 0 -> g' oc (NonTail x, Mov y)
+  | (NonTail x, Shift (y, z)) when z > 0 ->
+                                   Printf.fprintf oc "    shl     %s, %s, %d\n" x y z
+  | (NonTail x, Shift (y, z))   -> Printf.fprintf oc "    shr     %s, %s, %d\n" x y (-z)
   | (NonTail x, Ld (y, z))      -> Printf.fprintf oc "    mov     %s, %s\n" x (addr y z)
   | (NonTail x, LdL (Id.L y))   -> Printf.fprintf oc "    mov     %s, [%s]\n" x y
   | (NonTail _, St (x, y, z))   -> Printf.fprintf oc "    mov     %s, %s\n" (addr y z) x
   | (NonTail x, FNeg y)         -> Printf.fprintf oc "    fneg    %s, %s\n" x y
+  | (NonTail x, FAbs y)         -> Printf.fprintf oc "    shl     %s, %s, 1\n" x y;
+                                   Printf.fprintf oc "    shr     %s, %s, 1\n" x x
   | (NonTail x, FAdd (y, z))    -> Printf.fprintf oc "    fadd    %s, %s, %s\n" x y z
   | (NonTail x, FMul (y, z))    -> Printf.fprintf oc "    fmul    %s, %s, %s\n" x y z
   | (NonTail _, Save (x, y)) when List.mem x allregs && not (S.mem y !stackset) ->
@@ -88,7 +94,8 @@ and g' oc = function
   | (Tail, (Nop | St _ | Save _ as exp)) ->
       g' oc (NonTail (Id.gentmp Type.Unit), exp);
       Printf.fprintf oc "    ret\n";
-  | (Tail, (Li _ | Mov _ | MovL _ | Neg _ | Add _ | Addi _ | Add4 _ | Sub _ | Ld _ | LdL _ | FNeg _ | FAdd _ | FMul _ as exp)) ->
+  | (Tail, (Li _ | Mov _ | MovL _ | Neg _ | Add _ | Addi _ | Add4 _ | Sub _ | Shift _ |
+            Ld _ | LdL _ | FNeg _ | FAbs _ | FAdd _ | FMul _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);
       Printf.fprintf oc "    ret\n";
   | (Tail, (Restore x as exp)) ->
@@ -170,6 +177,6 @@ let f oc (Prog (data, fundefs, e)) =
   Printf.fprintf oc "    mov     [0x4000], $1\n";
   stackset := S.empty;
   stackmap := [];
-  g oc (NonTail("$0"), e);
+  g oc (NonTail("$1"), e);
   Printf.fprintf oc "    halt\n"
 

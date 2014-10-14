@@ -3,7 +3,7 @@
 open Syntax
 
 exception Unify of Type.t * Type.t
-exception Error of t * Type.t * Type.t
+exception Error of string * Type.t * Type.t
 
 let extenv = ref M.empty
 
@@ -16,10 +16,10 @@ let rec deref_typ = function
   | Type.Tuple ts      -> Type.Tuple (List.map deref_typ ts)
   | Type.Array t       -> Type.Array (deref_typ t)
   | Type.Var ({ contents = None } as r) ->
-      if !lv >= 3 then Format.eprintf "[info] uninstantiated type variable detected; assuming int@.";
+      if !lv >= 0 then Format.eprintf "[info] uninstantiated type variable detected; assuming int@.";
       r := Some(Type.Int);
       Type.Int
-  | Type.Var ({ contents = Some(t) } as r) ->
+  | Type.Var ({ contents = Some t } as r) ->
       let t' = deref_typ t in
       r := Some t';
       t'
@@ -28,13 +28,16 @@ let rec deref_typ = function
 let rec deref_id_typ (x, t) = (x, deref_typ t)
 
 let rec deref_term = function
-  | Not  e -> Not  (deref_term e)
-  | Neg  e -> Neg  (deref_term e)
-  | FNeg e -> FNeg (deref_term e)
+  | Not e -> Not (deref_term e)
+  | Neg e -> Neg (deref_term e)
   | Add (e1, e2) -> Add (deref_term e1, deref_term e2)
   | Sub (e1, e2) -> Sub (deref_term e1, deref_term e2)
+  | Mul (e1, e2) -> Mul (deref_term e1, deref_term e2)
+  | Div (e1, e2) -> Div (deref_term e1, deref_term e2)
   | Eq  (e1, e2) -> Eq  (deref_term e1, deref_term e2)
   | LE  (e1, e2) -> LE  (deref_term e1, deref_term e2)
+  | FNeg e -> FNeg (deref_term e)
+  | FAbs e -> FAbs (deref_term e)
   | FAdd (e1, e2) -> FAdd (deref_term e1, deref_term e2)
   | FMul (e1, e2) -> FMul (deref_term e1, deref_term e2)
   | If (e1, e2, e3) -> If (deref_term e1, deref_term e2, deref_term e3)
@@ -60,7 +63,7 @@ let rec occur r1 = function
   | Type.Array t2 -> occur r1 t2
   | Type.Var r2 when r1 == r2 -> true
   | Type.Var { contents = None } -> false
-  | Type.Var { contents = Some(t2) } -> occur r1 t2
+  | Type.Var { contents = Some t2 } -> occur r1 t2
   | _ -> false
 
 (* 型が合うように、型変数への代入をする *)
@@ -95,13 +98,15 @@ let rec g env e =
       | Bool  _ -> Type.Bool
       | Int   _ -> Type.Int
       | Float _ -> Type.Float
-      | Not  e -> unify Type.Bool  (g env e); Type.Bool
-      | Neg  e -> unify Type.Int   (g env e); Type.Int
-      | FNeg e -> unify Type.Float (g env e); Type.Float
-      | Add (e1, e2) | Sub (e1, e2) ->
+      | Not  e -> unify Type.Bool (g env e); Type.Bool
+      | Neg  e -> unify Type.Int  (g env e); Type.Int
+      | Add (e1, e2) | Sub (e1, e2) | Mul (e1, e2) | Div (e1, e2) ->
           unify Type.Int (g env e1);
           unify Type.Int (g env e2);
           Type.Int
+      | FNeg e | FAbs e ->
+          unify Type.Float (g env e);
+          Type.Float
       | FAdd (e1, e2) | FMul (e1, e2) ->
           unify Type.Float (g env e1);
           unify Type.Float (g env e2);
@@ -151,17 +156,11 @@ let rec g env e =
           unify Type.Int (g env e2);
           Type.Unit
   with Unify (t1, t2) ->
-    raise (Error (deref_term e, deref_typ t1, deref_typ t2))
+    raise (Error (Syntax.to_string (deref_term e), deref_typ t1, deref_typ t2))
 
 let f e =
   extenv := M.empty;
-(*
-  (match deref_typ (g M.empty e) with
-  | Type.Unit -> ()
-  | _ -> Format.eprintf "warning: final result does not have type unit@.");
-*)
-  (try unify Type.Unit (g M.empty e)
-   with Unify _ -> failwith "top level does not have type unit");
+  ignore (deref_typ (g M.empty e));
   extenv := M.map deref_typ !extenv;
   deref_term e
 

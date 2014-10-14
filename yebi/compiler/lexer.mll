@@ -21,6 +21,8 @@ rule token = parse
           { FLOAT (float_of_string (Lexing.lexeme lexbuf)) }
 | '+'     { PLUS }
 | '-'     { MINUS }
+| '*'     { AST }
+| '/'     { SLASH }
 | "+."    { PLUS_DOT }
 | "-."    { MINUS_DOT }
 | "*."    { AST_DOT }
@@ -39,7 +41,7 @@ rule token = parse
 | "rec"   { REC }
 | ','     { COMMA }
 | '_'     { IDENT (Id.gentmp Type.Unit) }
-| "Array.create"
+| "create_array"
           { ARRAY_CREATE }
 | '.'     { DOT }
 | "<-"    { LESS_MINUS }

@@ -31,7 +31,7 @@ let findadd4 x env = (match M.find x env with Add4 (a, b, c) -> (a, b, c) | _ ->
 (* [b-inary] 浮動小数点数の畳み込みは怪しいけど良いのかな...? *)
 let rec g env = function
   | Var x  when memi x env -> Int (findi x env)
-  (* | Var(x) when memf x env -> Float (findf x env) *) 
+  (* | Var(x) when memf x env -> Float (findf x env) *)
   (* | Var(x) when memt x env -> Tuple (findt x env) *)
   | Neg x when memi x env -> Int (- (findi x env))
   | Add  (x, y) when memi x env && memi y env -> Int (findi x env + findi y env)
@@ -49,7 +49,9 @@ let rec g env = function
   | Add4 (x, y, z) when memaddi y env -> let (a, b) = findaddi y env in Add4 (x, a, b + z)
   | Sub (x, y) when memi x env && memi y env -> Int (findi x env - findi y env)
   | Sub (x, y) when memi y env -> Addi (x, - (findi y env))
+  | Shift (x, y) when memi x env -> Int ((findi x env) lsl y)
   | FNeg x when memf x env -> Float (-. (findf x env))
+  | FAbs x when memf x env -> Float (abs_float (findf x env))
   | FAdd (x, y) when memf x env && memf y env -> Float (findf x env +. findf y env)
   | FMul (x, y) when memf x env && memf y env -> Float (findf x env *. findf y env)
   | IfEq (x, y, e1, e2) when memi x env && memi y env -> if findi x env = findi y env then g env e1 else g env e2

@@ -27,7 +27,9 @@ let rec g env = function
   | Closure.Addi (x, y) -> Ans (Addi (x, y))
   | Closure.Add4 (x, y, z) -> Ans (Add4 (x, y, z))
   | Closure.Sub (x, y) -> Ans (Sub (x, y))
+  | Closure.Shift (x, y) -> Ans (Shift (x, y))
   | Closure.FNeg x -> Ans (FNeg x)
+  | Closure.FAbs x -> Ans (FAbs x)
   | Closure.FAdd (x, y) -> Ans (FAdd (x, y))
   | Closure.FMul (x, y) -> Ans (FMul (x, y))
   | Closure.IfEq (x, y, e1, e2) ->
@@ -90,6 +92,7 @@ let rec g env = function
         | Type.Array _ ->
             Let ((offset, Type.Int), Add (x, y), Ans (St (z, offset, 0)))
         | _ -> assert false)
+  | Closure.ExtTuple (Id.L x) -> Ans (MovL (Id.L x))
   | Closure.ExtArray (Id.L x) -> Ans (MovL (Id.L x))
 
 (* 関数の仮想マシンコード生成 *)

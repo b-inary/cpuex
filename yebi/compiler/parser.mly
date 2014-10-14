@@ -7,12 +7,10 @@
 %token <int> INT
 %token <float> FLOAT
 %token NOT
-%token PLUS
-%token MINUS
-%token PLUS_DOT
-%token MINUS_DOT
-%token AST_DOT
-%token SLASH_DOT
+%token PLUS MINUS
+%token AST SLASH
+%token PLUS_DOT MINUS_DOT
+%token AST_DOT SLASH_DOT
 %token EQUAL
 %token LESS_GREATER
 %token LESS_EQUAL
@@ -45,7 +43,7 @@
 %left COMMA
 %left EQUAL LESS_GREATER LESS_EQUAL GREATER_EQUAL LESS GREATER
 %left PLUS MINUS PLUS_DOT MINUS_DOT
-%left AST_DOT SLASH_DOT
+%left AST SLASH AST_DOT SLASH_DOT
 %right prec_unary_minus
 %left prec_app
 %left DOT
@@ -78,6 +76,8 @@ exp:
                                 | e -> Neg e }
 | exp PLUS exp              { Add ($1, $3) }
 | exp MINUS exp             { Sub ($1, $3) }
+| exp AST exp               { Mul ($1, $3) }
+| exp SLASH exp             { Div ($1, $3) }
 | exp EQUAL exp             { Eq ($1, $3) }
 | exp LESS_GREATER exp      { Not (Eq ($1, $3)) }
 | exp LESS exp              { Not (LE ($3, $1)) }
@@ -104,6 +104,7 @@ exp:
 | simple_exp DOT LPAREN exp RPAREN LESS_MINUS exp
                             { Put ($1, $4, $7) }
 | exp SEMICOLON exp         { Let ((Id.gentmp Type.Unit, Type.Unit), $1, $3) }
+| exp SEMICOLON             { Let ((Id.gentmp Type.Unit, Type.Unit), $1, Unit) }
 | ARRAY_CREATE simple_exp simple_exp
     %prec prec_app          { Array ($2, $3) }
 | FEQUAL simple_exp simple_exp
@@ -121,10 +122,9 @@ exp:
 | FSQR simple_exp
     %prec prec_app          { FMul ($2, $2) }
 | FABS simple_exp
-    %prec prec_app          { If (Not (LE (Float 0.0, $2)), FNeg $2, $2) }
+    %prec prec_app          { FAbs $2 }
 | FNEG simple_exp
     %prec prec_app          { FNeg $2 }
-| EOF                       { exit 0 }
 | error
     { failwith
         (Printf.sprintf "\nerror: parse error near characters %d-%d\n"

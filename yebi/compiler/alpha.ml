@@ -11,11 +11,13 @@ let rec g env = function
   | Int   i -> Int i
   | Float d -> Float d
   | Neg x -> Neg (find x env)
-  | Add  (x, y) -> Add  (find x env, find y env)
-  | Addi (x, y) -> Addi (find x env, y)
-  | Add4 (x, y, z) -> Add4 (find x env, find y env, z)
-  | Sub  (x, y) -> Sub (find x env, find y env)
+  | Add   (x, y)    -> Add   (find x env, find y env)
+  | Addi  (x, y)    -> Addi  (find x env, y)
+  | Add4  (x, y, z) -> Add4  (find x env, find y env, z)
+  | Sub   (x, y)    -> Sub   (find x env, find y env)
+  | Shift (x, y)    -> Shift (find x env, y)
   | FNeg x      -> FNeg (find x env)
+  | FAbs x      -> FAbs (find x env)
   | FAdd (x, y) -> FAdd (find x env, find y env)
   | FMul (x, y) -> FMul (find x env, find y env)
   | IfEq (x, y, e1, e2) -> IfEq (find x env, find y env, g env e1, g env e2)
@@ -40,6 +42,7 @@ let rec g env = function
       LetTuple (List.map (fun (x, t) -> (find x env', t)) xts, find y env, g env' e)
   | Get(x, y) -> Get (find x env, find y env)
   | Put(x, y, z) -> Put (find x env, find y env, find z env)
+  | ExtTuple x -> ExtTuple x
   | ExtArray x -> ExtArray x
   | ExtFunApp (x, ys) -> ExtFunApp (x, List.map (fun y -> find y env) ys)
 
