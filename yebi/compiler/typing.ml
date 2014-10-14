@@ -16,7 +16,7 @@ let rec deref_typ = function
   | Type.Tuple ts      -> Type.Tuple (List.map deref_typ ts)
   | Type.Array t       -> Type.Array (deref_typ t)
   | Type.Var ({ contents = None } as r) ->
-      if !lv >= 0 then Format.eprintf "[info] uninstantiated type variable detected; assuming int@.";
+      if !lv >= 2 then Format.eprintf "[info] uninstantiated type variable detected; assuming int@.";
       r := Some(Type.Int);
       Type.Int
   | Type.Var ({ contents = Some t } as r) ->

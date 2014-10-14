@@ -167,7 +167,7 @@ let h oc { name = Id.L x; args = _; body = e; ret = _; local = c } =
   stackmap := [];
   g oc (Tail, e)
 
-let f oc (Prog (data, fundefs, e)) =
+let f oc (Prog (data, fundefs, e, c)) =
   Printf.fprintf oc ".data\n";
   List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-s:\n    .float  %.15g\n" x f) (List.rev data);
   Printf.fprintf oc ".text\n";
@@ -175,6 +175,7 @@ let f oc (Prog (data, fundefs, e)) =
   Printf.fprintf oc ".global main\nmain:\n";
   Printf.fprintf oc "    mov     $1, 0x4001\n";
   Printf.fprintf oc "    mov     [0x4000], $1\n";
+  if c > 0 then Printf.fprintf oc "    sub     $sp, $sp, %d\n" c;
   stackset := S.empty;
   stackmap := [];
   g oc (NonTail("$1"), e);

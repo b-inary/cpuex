@@ -1918,10 +1918,20 @@ in
 let rec write_ppm_header _ =
   (
     print_char 80; (* 'P' *)
-    print_char (48 + 6); (* +6 if binary *) (* 48 = '0' *)
-    print_char image_size.(0);
-    print_char image_size.(1);
-    print_char 255
+    print_char (48 + 6); (* +6 if binary *)
+    print_char 10;
+    print_char (48 + 1); (* width: 128 *)
+    print_char (48 + 2);
+    print_char (48 + 8);
+    print_char 32;
+    print_char (48 + 1); (* height: 128 *)
+    print_char (48 + 2);
+    print_char (48 + 8);
+    print_char 10;
+    print_char (48 + 2); (* max value: 255 *)
+    print_char (48 + 5);
+    print_char (48 + 5);
+    print_char 10
   )
 in
 

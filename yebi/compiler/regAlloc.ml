@@ -185,8 +185,9 @@ let h { name = Id.L x; args = ys; body = e; ret = t; local = _ } =
   { name = Id.L x; args = arg_regs; body = e'; ret = t; local = !counter }
 
 (* プログラム全体のレジスタ割り当て *)
-let f (Prog (data, fundefs, e)) =
+let f (Prog (data, fundefs, e, _)) =
   let fundefs' = List.map h fundefs in
+  counter := 0;
   let (e', regenv') = g (Id.gentmp Type.Unit, Type.Unit) (Ans Nop) M.empty e in
-  Prog (data, fundefs', e')
+  Prog (data, fundefs', e', !counter)
 

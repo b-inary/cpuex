@@ -43,6 +43,8 @@ rule token = parse
 | '_'     { IDENT (Id.gentmp Type.Unit) }
 | "create_array"
           { ARRAY_CREATE }
+| "Array.create"
+          { ARRAY_CREATE }
 | '.'     { DOT }
 | "<-"    { LESS_MINUS }
 | ';'     { SEMICOLON }

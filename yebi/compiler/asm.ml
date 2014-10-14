@@ -33,7 +33,7 @@ and exp =
 type fundef = { name: Id.l; args: Id.t list; body: t; ret: Type.t; local: int }
 
 (* プログラム全体 = 浮動小数点数テーブル + トップレベル関数 + メインの式 *)
-type prog = Prog of (Id.l * float) list * fundef list * t
+type prog = Prog of (Id.l * float) list * fundef list * t * int
 
 let seq (e1, e2) = Let ((Id.gentmp Type.Unit, Type.Unit), e1, e2)
 

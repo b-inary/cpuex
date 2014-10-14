@@ -8,6 +8,7 @@ import argparse
 
 srcs = {'_main': {0: 'br main'}}
 filename = ''
+library = 'libmincaml.s'
 pos = 0
 
 def error(msg):
@@ -339,6 +340,26 @@ def expand_dot_text(operands):
     check_operands_n(operands, 0)
     return []
 
+def expand_dot_int(operands):
+    check_operands_n(operands, 1, 2)
+    if len(operands) == 1:
+        return ['.int {}'.format(operands[0])]
+    success, imm = parse_imm(operands[1])
+    if not success:
+        error('invalid syntax')
+    check_imm_range(imm, 0, 1000)
+    return ['.int {}'.format(operands[0])] * imm
+
+def expand_dot_float(operands):
+    check_operands_n(operands, 1, 2)
+    if len(operands) == 1:
+        return ['.float {}'.format(operands[0])]
+    success, imm = parse_imm(operands[1])
+    if not success:
+        error('invalid syntax')
+    check_imm_range(imm, 0, 1000)
+    return ['.float {}'.format(operands[0])] * imm
+
 macro_table = {
     'nop':      expand_nop,
     'mov':      expand_mov,
@@ -358,7 +379,9 @@ macro_table = {
     'ret':      expand_ret,
     'halt':     expand_halt,
     '.data':    expand_dot_data,
-    '.text':    expand_dot_text
+    '.text':    expand_dot_text,
+    '.int':     expand_dot_int,
+    '.float':   expand_dot_float
 }
 
 
@@ -407,7 +430,7 @@ def subst(label, cur):
         return ['$ip', str(labels[label][decl][0] - cur)]
 
 def warn_unused_label(label):
-    if not labels[label][filename][2]:
+    if not labels[label][filename][2] and filename != library:
         print >> sys.stderr, '{}:{}: warning: unused label \'{}\''.format(filename, pos, label)
 
 
@@ -418,6 +441,7 @@ def warn_unused_label(label):
 # parse command line arguments
 argparser = argparse.ArgumentParser(usage='%(prog)s [options] file...')
 argparser.add_argument('inputs', nargs='*', help='input files', metavar='files...')
+argparser.add_argument('-l', help='set library file to <file> (default: {})'.format(library), metavar='<file>')
 argparser.add_argument('-o', help='set output file to <file>', metavar='<file>')
 argparser.add_argument('-s', action='store_const', const=True, help='output primitive assembly')
 args = argparser.parse_args()
@@ -426,6 +450,10 @@ if args.inputs == []:
     print >> sys.stderr, 'usage: {} [options] file...'.format(prog)
     print >> sys.stderr, '{}: error: no input files'.format(prog)
     sys.exit(1)
+if args.l:
+    library = args.l
+if library not in args.inputs:
+    args.inputs.append(library)
 
 # 0. preprocess
 lines0 = [('nop', '', 0), ('br main', '_main', 0)]
@@ -439,6 +467,7 @@ for filename in args.inputs:
             line = re.sub(r'[;#].*', '', line).strip()
             if line:
                 lines0.append((line, filename, pos + 1))
+lines0.extend([('halt', '', 0)] * 3)
 
 # 1. macro expansion
 lines1 = []

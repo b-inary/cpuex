@@ -6,7 +6,7 @@ open MiniMLRuntime;;
 let n_objects = create_array 1 0
 
 (* オブジェクトのデータを入れるベクトル（最大60個）*)
-let objects = 
+let objects =
   let dummy = create_array 0 0.0 in
   create_array 60 (0, 0, 0, 0, dummy, dummy, false, dummy, dummy, dummy, dummy)
 
@@ -65,7 +65,7 @@ let screenz_dir = create_array 3 0.0
 let ptrace_dirvec  = create_array 3 0.0
 
 (* 間接光サンプリングに使う方向ベクトル *)
-let dirvecs = 
+let dirvecs =
   let dummyf = create_array 0 0.0 in
   let dummyff = create_array 0 dummyf in
   let dummy_vs = create_array 0 (dummyf, dummyff) in
@@ -85,7 +85,7 @@ let reflections =
   let dummydv = (dummyf3, dummyff3) in
   create_array 180 (0, dummydv, 0.0)
 
-(* reflectionsの有効な要素数 *) 
+(* reflectionsの有効な要素数 *)
 
 let n_reflections = create_array 1 0
 
