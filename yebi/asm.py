@@ -1,6 +1,7 @@
 #!/usr/bin/env python2.7
 
 import sys
+import os.path
 import re
 import struct
 import argparse
@@ -452,7 +453,7 @@ if args.inputs == []:
     sys.exit(1)
 if args.l:
     library = args.l
-if library not in args.inputs:
+if os.path.isfile(library) and library not in args.inputs:
     args.inputs.append(library)
 
 # 0. preprocess

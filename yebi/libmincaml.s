@@ -11,7 +11,7 @@ print_char:
     write   $1
     ret
 
-# read 4byte (big endian)
+# read 4bytes (big endian)
 .global read_int
 read_int:
 .global read_float
@@ -28,7 +28,7 @@ read_float:
     add     $1, $1, $3
     ret
 
-# write 4byte (big endian)
+# write 4bytes (big endian)
 .global print_int
 print_int:
 .global print_float
@@ -54,8 +54,8 @@ create_array_loop:
     mov     [$3], $2
     add     $3, $3, 1
     ble     $3, $4, create_array_loop
-create_array_ret:
     sub     $1, $3, $1
+create_array_ret:
     ret
 
 
@@ -64,31 +64,13 @@ const_1:
 const_2:
     .int    0x56800000
 
-# float -> int
-.global int_of_float
-int_of_float:
-    ble     $0, $1, ftoi_L1
-    fneg    $1, $1
-    call    ftoi_abs
-    neg     $1, $1
-    ret
-ftoi_L1:
-    call    ftoi_abs
-    ret
-ftoi_abs:
-    # TODO
-    ret
-
 # int -> float
 .global float_of_int
 float_of_int:
-    ble     $0, $1, itof_L1
+    ble     $0, $1, itof_abs
     neg     $1, $1
     call    itof_abs
     fneg    $1, $1
-    ret
-itof_L1:
-    call    itof_abs
     ret
 itof_abs:
     mov     $3, [const_1]
@@ -103,6 +85,18 @@ itof_abs:
     fadd    $1, $1, $3
     fadd    $2, $2, $4
     fadd    $1, $1, $2
+    ret
+
+# float -> int
+.global int_of_float
+int_of_float:
+    ble     $0, $1, ftoi_abs
+    fneg    $1, $1
+    call    ftoi_abs
+    neg     $1, $1
+    ret
+ftoi_abs:
+    # TODO
     ret
 
 # TODO

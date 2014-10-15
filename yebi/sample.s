@@ -1,12 +1,14 @@
 
-.data
+# assembly sample
+
+label:
+
+    # directives
     .int    42
     .int    0xdeadbeef, 3
     .float  1.2e34
     .float  -3.141592, 3
 
-.text
-label:
 .global main
 main:
 
@@ -25,6 +27,7 @@ main:
     ble     $1, $2, $3, 4
 
     # macros
+    add     $sp, $bp, $ip
     nop
     mov     $1, $2
     mov     $1, 2
@@ -55,3 +58,4 @@ main:
     call    label
     ret
     halt
+

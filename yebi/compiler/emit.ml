@@ -156,7 +156,7 @@ and g'_args oc x_reg_cl ys =
                   (fun (i, yrs) y -> (i + 1, (y, regs.(i)) :: yrs))
                   (0, x_reg_cl) ys in
   List.iter
-    (fun (y, r) -> Printf.fprintf oc "    mov     %s, %s\n" r y)
+    (fun (y, r) -> if y <> "$unit" then Printf.fprintf oc "    mov     %s, %s\n" r y)
     (shuffle reg_sw yrs)
 
 let h oc { name = Id.L x; args = _; body = e; ret = _; local = c } =
@@ -178,6 +178,6 @@ let f oc (Prog (data, fundefs, e, c)) =
   if c > 0 then Printf.fprintf oc "    sub     $sp, $sp, %d\n" c;
   stackset := S.empty;
   stackmap := [];
-  g oc (NonTail("$1"), e);
+  g oc (NonTail(regs.(0)), e);
   Printf.fprintf oc "    halt\n"
 

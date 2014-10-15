@@ -2,8 +2,8 @@
 open Asm
 
 (* for register coalescing *)
-(* [XXX] Callがあったら、そこから先は無意味というか逆効果なので追わない。
-         そのために「Callがあったかどうか」を返り値の第1要素に含める。 *)
+(* Callがあったら、そこから先は無意味というか逆効果なので追わない。
+   そのために「Callがあったかどうか」を返り値の第1要素に含める。 *)
 let rec target' src (dest, t) = function
   | Mov x when x = src && is_reg dest ->
       assert (t <> Type.Unit);
@@ -43,9 +43,9 @@ let rec alloc dest cont regenv x t =
   assert (not (M.mem x regenv));
   let all =
     match t with
-      | Type.Unit -> ["$0"] (* dummy *)
+      | Type.Unit -> [] (* dummy *)
       | _ -> allregs in
-  if all = ["$0"] then Alloc "$0" else (* [XX] ad hoc optimization *)
+  if all = [] then Alloc "$unit" else (* ad hoc *)
   if is_reg x then Alloc x else
   let free = fv cont in
   try
