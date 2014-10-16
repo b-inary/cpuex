@@ -1,8 +1,9 @@
 
 open Asm
 
-(* 浮動小数点数の定数テーブル *)
-let data = ref []
+(* 定数テーブル *)
+let idata = ref []
+let fdata = ref []
 
 let expand xts ini it =
   List.fold_left
@@ -12,20 +13,39 @@ let expand xts ini it =
         | _ -> (off + 1, it x t off acc))
     ini xts
 
+let in_range x = -0x8000 <= x && x <= 0x7fff
+
+let add_int_data i =
+  try fst (List.find (fun (_, i') -> i = i') !idata)
+  with Not_found ->
+    let l = Id.L (Id.genid "int") in
+    idata := (l, i) :: !idata; l
+
+let add_float_data f =
+  try fst (List.find (fun (_, f') -> f = f') !fdata)
+  with Not_found ->
+    let l = Id.L (Id.genid "flt") in
+    fdata := (l, f) :: !fdata; l
+
 (* 式の仮想マシンコード生成 *)
 let rec g env = function
   | Closure.Unit -> Ans Nop
-  | Closure.Int i -> Ans (Li i)
-  | Closure.Float f ->
-      let l = try fst (List.find (fun (_, f') -> f = f') !data)
-              with Not_found ->
-                let l = Id.L (Id.genid "flt") in
-                data := (l, f) :: !data; l in
-      Ans (LdL l)
+  | Closure.Int i when in_range i -> Ans (Li i)
+  | Closure.Int i -> let l = add_int_data i in Ans (LdL l)
+  | Closure.Float f -> let l = add_float_data f in Ans (LdL l)
   | Closure.Neg x -> Ans (Neg x)
   | Closure.Add (x, y) -> Ans (Add (x, y))
-  | Closure.Addi (x, y) -> Ans (Addi (x, y))
-  | Closure.Add4 (x, y, z) -> Ans (Add4 (x, y, z))
+  | Closure.Addi (x, y) when in_range y -> Ans (Addi (x, y))
+  | Closure.Addi (x, y) ->
+      let l = add_int_data y in
+      let t = Id.genid "t" in
+      Let ((t, Type.Int), LdL l, Ans (Add (x, t)))
+  | Closure.Add4 (x, y, z) when in_range z -> Ans (Add4 (x, y, z))
+  | Closure.Add4 (x, y, z) ->
+      let l = add_int_data z in
+      let t = Id.genid "t" in
+      let s = Id.genid "t" in
+      Let ((t, Type.Int), LdL l, Let ((s, Type.Int), Add (x, y), Ans (Add (t, s))))
   | Closure.Sub (x, y) -> Ans (Sub (x, y))
   | Closure.Shift (x, y) -> Ans (Shift (x, y))
   | Closure.FNeg x -> Ans (FNeg x)
@@ -90,8 +110,18 @@ let rec g env = function
                   if not (S.mem x s) then load else
                   Let ((x, t), Ld (y, offset), load)) in
       load
-  | Closure.Load (x, y) -> Ans (Ld (x, y))
-  | Closure.Store (x, y, z) -> Ans (St (x, y, z))
+  | Closure.Load (x, y) when in_range y -> Ans (Ld (x, y))
+  | Closure.Load (x, y) ->
+      let l = add_int_data y in
+      let t = Id.genid "t" in
+      let s = Id.genid "t" in
+      Let ((t, Type.Int), LdL l, Let ((s, Type.Int), Add (x, t), Ans (Ld (s, 0))))
+  | Closure.Store (x, y, z) when in_range z -> Ans (St (x, y, z))
+  | Closure.Store (x, y, z) ->
+      let l = add_int_data z in
+      let t = Id.genid "t" in
+      let s = Id.genid "t" in
+      Let ((t, Type.Int), LdL l, Let ((s, Type.Int), Add (y, t), Ans (St (x, s, 0))))
   | Closure.ExtTuple (Id.L x) -> Ans (MovL (Id.L x))
   | Closure.ExtArray (Id.L x) -> Ans (MovL (Id.L x))
 
@@ -106,8 +136,8 @@ let h { Closure.name = (Id.L x, t); Closure.args = yts; Closure.formal_fv = zts;
 
 (* プログラム全体の仮想マシンコード生成 *)
 let f (Closure.Prog (fundefs, e)) =
-  data := [];
+  idata := []; fdata := [];
   let fundefs = List.map h fundefs in
   let e = g M.empty e in
-  Prog (!data, fundefs, e, 0)
+  Prog ((!idata, !fdata), fundefs, e, 0)
 

@@ -431,7 +431,7 @@ def subst(label, cur):
         return ['$ip', str(labels[label][decl][0] - cur)]
 
 def warn_unused_label(label):
-    if not labels[label][filename][2] and filename != library:
+    if not labels[label][filename][2] and not (filename == library and labels[label][filename][1]):
         print >> sys.stderr, '{}:{}: warning: unused label \'{}\''.format(filename, pos, label)
 
 

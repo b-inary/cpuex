@@ -167,7 +167,8 @@ let h oc { name = Id.L x; args = _; body = e; ret = _; local = c } =
   g oc (Tail, e)
 
 let f oc (Prog (data, fundefs, e, c)) =
-  List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-s:\n    .float  %.15g\n" x f) (List.rev data);
+  List.iter (fun (Id.L x, i) -> Printf.fprintf oc "%-s:\n    .int    %d\n" x i) (List.rev (fst data));
+  List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-s:\n    .float  %.15g\n" x f) (List.rev (snd data));
   List.iter (fun fundef -> h oc fundef) fundefs;
   Printf.fprintf oc ".global main\nmain:\n";
   Printf.fprintf oc "    mov     $1, 0x4001\n";
