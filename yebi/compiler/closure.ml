@@ -25,8 +25,8 @@ type t =
   | AppDir of Id.l * Id.t list
   | Tuple of Id.t list
   | LetTuple of (Id.t * Type.t) list * Id.t * t
-  | Get of Id.t * Id.t
-  | Put of Id.t * Id.t * Id.t
+  | Load of Id.t * int
+  | Store of Id.t * Id.t * int
   | ExtTuple of Id.l
   | ExtArray of Id.l
 
@@ -40,8 +40,8 @@ type prog = Prog of fundef list * t
 
 let rec fv = function
   | Unit | Int _ | Float _  | ExtTuple _ | ExtArray _ -> S.empty
-  | Neg x | Addi (x, _) | Shift (x, _) | FNeg x | FAbs x -> S.singleton x
-  | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Get (x, y) -> S.of_list [x; y]
+  | Neg x | Addi (x, _) | Shift (x, _) | FNeg x | FAbs x | Load (x, _) -> S.singleton x
+  | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Store (x, y, _) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2)| IfLE (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | Let ((x, t), e1, e2) -> S.union (fv e1) (S.remove x (fv e2))
   | Var x -> S.singleton x
@@ -49,7 +49,6 @@ let rec fv = function
   | AppCls (x, ys) -> S.of_list (x :: ys)
   | AppDir (_, xs) | Tuple xs -> S.of_list xs
   | LetTuple (xts, y, e) -> S.add y (S.diff (fv e) (S.of_list (List.map fst xts)))
-  | Put (x, y, z) -> S.of_list [x; y; z]
 
 let toplevel : fundef list ref = ref []
 
@@ -105,8 +104,8 @@ let rec g env known = function
   | KNormal.App (f, xs) -> AppCls (f, xs)
   | KNormal.Tuple xs -> Tuple xs
   | KNormal.LetTuple (xts, y, e) -> LetTuple (xts, y, g (M.add_list xts env) known e)
-  | KNormal.Get (x, y) -> Get (x, y)
-  | KNormal.Put (x, y, z) -> Put (x, y, z)
+  | KNormal.Load (x, y) -> Load (x, y)
+  | KNormal.Store (x, y, z) -> Store (x, y, z)
   | KNormal.ExtTuple x -> ExtTuple (Id.L x)
   | KNormal.ExtArray x -> ExtArray (Id.L x)
   | KNormal.ExtFunApp (x, ys) -> AppDir (Id.L x, ys)

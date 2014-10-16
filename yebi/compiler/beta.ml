@@ -32,8 +32,8 @@ let rec g env = function
   | Var x -> Var (find x env)
   | Tuple xs -> Tuple (List.map (fun x -> find x env) xs)
   | LetTuple (xts, y, e) -> LetTuple (xts, find y env, g env e)
-  | Get (x, y)    -> Get (find x env, find y env)
-  | Put (x, y, z) -> Put (find x env, find y env, find z env)
+  | Load (x, y) -> Load (find x env, y)
+  | Store (x, y, z) -> Store (find x env, find y env, z)
   | App (g, xs) -> App(find g env, List.map (fun x -> find x env) xs)
   | ExtTuple x -> ExtTuple x
   | ExtArray x -> ExtArray x

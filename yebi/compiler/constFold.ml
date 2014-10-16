@@ -70,6 +70,8 @@ let rec g env = function
   | LetTuple (xts, y, e) when memt y env ->
       List.fold_left2 (fun e' xt z -> Let(xt, Var(z), e')) (g env e) xts (findt y env)
   | LetTuple (xts, y, e) -> LetTuple(xts, y, g env e)
+  | Load (x, y) when memaddi x env -> let (a, b) = findaddi x env in Load (a, b + y)
+  | Store (x, y, z) when memaddi y env -> let (a, b) = findaddi y env in Store (x, a, b + z)
   | e -> e
 
 let f = g M.empty

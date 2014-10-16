@@ -40,8 +40,8 @@ let rec g env = function
       let xs = List.map fst xts in
       let env' = M.add_list2 xs (List.map Id.genid xs) env in
       LetTuple (List.map (fun (x, t) -> (find x env', t)) xts, find y env, g env' e)
-  | Get(x, y) -> Get (find x env, find y env)
-  | Put(x, y, z) -> Put (find x env, find y env, find z env)
+  | Load (x, y) -> Load (find x env, y)
+  | Store (x, y, z) -> Store (find x env, find y env, z)
   | ExtTuple x -> ExtTuple x
   | ExtArray x -> ExtArray x
   | ExtFunApp (x, ys) -> ExtFunApp (x, List.map (fun y -> find y env) ys)

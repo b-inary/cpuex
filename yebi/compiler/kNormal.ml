@@ -24,11 +24,12 @@ type t =
   | App of Id.t * Id.t list
   | Tuple of Id.t list
   | LetTuple of (Id.t * Type.t) list * Id.t * t
-  | Get of Id.t * Id.t
-  | Put of Id.t * Id.t * Id.t
+  | Load of Id.t * int
+  | Store of Id.t * Id.t * int
   | ExtTuple of Id.t
   | ExtArray of Id.t
   | ExtFunApp of Id.t * Id.t list
+
 and fundef =
   { name: Id.t * Type.t; args: (Id.t * Type.t) list; body: t }
 
@@ -38,8 +39,8 @@ let log2 i = let rec go n m = if m = i then n else go (n + 1) (m * 2) in go 0 1
 (* 式に出現する自由変数 *)
 let rec fv = function
   | Unit | Int _ | Float _ | ExtTuple _ | ExtArray _ -> S.empty
-  | Neg x | Addi (x, _) | Shift (x, _) | FNeg x | FAbs x -> S.singleton x
-  | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Get (x, y) -> S.of_list [x; y]
+  | Neg x | Addi (x, _) | Shift (x, _) | FNeg x | FAbs x | Load (x, _) -> S.singleton x
+  | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Store (x, y, _) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2) | IfLE (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | Let ((x, t), e1, e2) -> S.union (fv e1) (S.remove x (fv e2))
   | Var x -> S.singleton x
@@ -48,7 +49,6 @@ let rec fv = function
       S.diff (S.union zs (fv e2)) (S.singleton x)
   | App (x, ys) -> S.of_list (x :: ys)
   | Tuple xs | ExtFunApp (_, xs) -> S.of_list xs
-  | Put (x, y, z) -> S.of_list [x; y; z]
   | LetTuple (xs, y, e) -> S.add y (S.diff (fv e) (S.of_list (List.map fst xs)))
 
 (* letを挿入する補助関数 *)
@@ -57,8 +57,8 @@ let insert_let (e, t) k =
     | Var x -> k x
     | _ ->
         let x = Id.gentmp t in
-        let e', t' = k x in
-        Let ((x, t), e, e'), t'
+        let (e', t') = k x in
+        (Let ((x, t), e, e'), t')
 
 (* K正規化ルーチン本体 *)
 let rec g env = function
@@ -163,15 +163,12 @@ let rec g env = function
           insert_let g_e2 (fun y -> (ExtFunApp ("create_array", [x; y]), Type.Array t2)))
   | Syntax.Get (e1, e2) ->
       (match g env e1 with
-        | (_, Type.Array t) as g_e1 ->
-            insert_let g_e1
-              (fun x -> insert_let (g env e2) (fun y -> Get (x, y), t))
+        | (_, Type.Array t) ->
+            insert_let (g env (Syntax.Add (e1, e2))) (fun x -> (Load (x, 0), t))
         | _ -> assert false)
   | Syntax.Put (e1, e2, e3) ->
-      insert_let (g env e1)
-        (fun x -> insert_let (g env e2)
-          (fun y -> insert_let (g env e3)
-            (fun z -> (Put (x, y, z), Type.Unit))))
+      insert_let (g env (Syntax.Add (e1, e2)))
+        (fun x -> insert_let (g env e3) (fun y -> (Store (y, x, 0), Type.Unit)))
 
 let f e = fst (g M.empty e)
 

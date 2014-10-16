@@ -19,7 +19,7 @@ let rec id_of_typ = function
   | Type.Float -> "d"
   | Type.Fun _ -> "f"
   | Type.Tuple _ -> "t"
-  | Type.Array _ -> "a" 
+  | Type.Array _ -> "a"
   | Type.Var _ -> assert false
 
 let gentmp typ =

@@ -5,7 +5,7 @@ open KNormal
 let rec effect = function
   | Let (_, e1, e2) | IfEq (_, _, e1, e2) | IfLE (_, _, e1, e2) -> effect e1 || effect e2
   | LetRec (_, e) | LetTuple (_, _, e) -> effect e
-  | App _ | Put _ | ExtFunApp _ -> true
+  | App _ | Store _ | ExtFunApp _ -> true
   | _ -> false
 
  (* 副作用の有無 *)

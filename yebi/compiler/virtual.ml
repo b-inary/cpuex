@@ -78,20 +78,8 @@ let rec g env = function
                   if not (S.mem x s) then load else
                   Let ((x, t), Ld (y, offset), load)) in
       load
-  | Closure.Get (x, y) ->
-      let offset = Id.genid "o" in
-      (match M.find x env with
-        | Type.Array Type.Unit -> Ans Nop
-        | Type.Array _ ->
-            Let ((offset, Type.Int), Add (x, y), Ans (Ld (offset, 0)))
-        | _ -> assert false)
-  | Closure.Put (x, y, z) ->
-      let offset = Id.genid "o" in
-      (match M.find x env with
-        | Type.Array Type.Unit -> Ans Nop
-        | Type.Array _ ->
-            Let ((offset, Type.Int), Add (x, y), Ans (St (z, offset, 0)))
-        | _ -> assert false)
+  | Closure.Load (x, y) -> Ans (Ld (x, y))
+  | Closure.Store (x, y, z) -> Ans (St (x, y, z))
   | Closure.ExtTuple (Id.L x) -> Ans (MovL (Id.L x))
   | Closure.ExtArray (Id.L x) -> Ans (MovL (Id.L x))
 
