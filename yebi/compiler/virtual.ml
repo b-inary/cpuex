@@ -131,7 +131,7 @@ let h { Closure.name = (Id.L x, t); Closure.args = yts; Closure.formal_fv = zts;
     expand zts (1, g (M.add x t (M.add_list yts (M.add_list zts M.empty))) e)
            (fun z t offset load -> Let ((z, t), Ld (reg_cl, offset), load)) in
   match t with
-    | Type.Fun (_, t2) -> { name = Id.L x; args = fst (List.split yts); body = load; ret = t2; local = 0 }
+    | Type.Fun (_, t2) -> { name = Id.L x; args = fst (List.split yts); body = load; ret = t2 }
     | _ -> assert false
 
 (* プログラム全体の仮想マシンコード生成 *)
@@ -139,5 +139,5 @@ let f (Closure.Prog (fundefs, e)) =
   idata := []; fdata := [];
   let fundefs = List.map h fundefs in
   let e = g M.empty e in
-  Prog ((!idata, !fdata), fundefs, e, 0)
+  Prog ((!idata, !fdata), fundefs, e)
 

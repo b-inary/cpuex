@@ -30,10 +30,10 @@ and exp =
   | Save of Id.t * Id.t
   | Restore of Id.t
 
-type fundef = { name: Id.l; args: Id.t list; body: t; ret: Type.t; local: int }
+type fundef = { name: Id.l; args: Id.t list; body: t; ret: Type.t }
 
 (* プログラム全体 = 浮動小数点数テーブル + トップレベル関数 + メインの式 *)
-type prog = Prog of ((Id.l * int) list * (Id.l * float) list) * fundef list * t * int
+type prog = Prog of ((Id.l * int) list * (Id.l * float) list) * fundef list * t
 
 let seq (e1, e2) = Let ((Id.gentmp Type.Unit, Type.Unit), e1, e2)
 
