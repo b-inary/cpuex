@@ -41,6 +41,7 @@ let rec deref_term = function
   | FAdd (e1, e2) -> FAdd (deref_term e1, deref_term e2)
   | FMul (e1, e2) -> FMul (deref_term e1, deref_term e2)
   | If (e1, e2, e3) -> If (deref_term e1, deref_term e2, deref_term e3)
+  | Xor (e1, e2) -> Xor (deref_term e1, deref_term e2)
   | Let (xt, e1, e2) -> Let (deref_id_typ xt, deref_term e1, deref_term e2)
   | LetRec ({ name = xt; args = yts; body = e1 }, e2) ->
       LetRec ({ name = deref_id_typ xt;
@@ -115,11 +116,15 @@ let rec g env e =
           unify (g env e1) (g env e2);
           Type.Bool
       | If (e1, e2, e3) ->
-          unify (g env e1) Type.Bool;
+          unify Type.Bool (g env e1);
           let t2 = g env e2 in
           let t3 = g env e3 in
           unify t2 t3;
           t2
+      | Xor (e1, e2) ->
+          unify Type.Bool (g env e1);
+          unify Type.Bool (g env e2);
+          Type.Bool
       | Let ((x, t), e1, e2) ->
           unify t (g env e1);
           g (M.add x t env) e2

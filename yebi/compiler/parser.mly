@@ -31,6 +31,7 @@
 %token SEMICOLON
 %token LPAREN
 %token RPAREN
+%token XOR
 %token FEQUAL FLESS FISPOS FISNEG FISZERO
 %token FHALF FSQR FABS FNEG
 %token EOF
@@ -107,6 +108,8 @@ exp:
 | exp SEMICOLON             { Let ((Id.gentmp Type.Unit, Type.Unit), $1, Unit) }
 | ARRAY_CREATE simple_exp simple_exp
     %prec prec_app          { Array ($2, $3) }
+| XOR simple_exp simple_exp
+    %prec prec_app          { Xor ($2, $3) }
 | FEQUAL simple_exp simple_exp
     %prec prec_app          { Eq ($2, $3) }
 | FLESS simple_exp simple_exp

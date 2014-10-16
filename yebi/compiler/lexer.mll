@@ -16,6 +16,7 @@ rule token = parse
 | "true"  { BOOL true }
 | "false" { BOOL false }
 | "not"   { NOT }
+| "xor"   { XOR }
 | digit+  { INT (int_of_string (Lexing.lexeme lexbuf)) }
 | digit+ ('.' digit*)? (['e' 'E'] ['+' '-']? digit+)?
           { FLOAT (float_of_string (Lexing.lexeme lexbuf)) }

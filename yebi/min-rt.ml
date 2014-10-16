@@ -11,11 +11,10 @@
 
 (*
   改変版:
-    - true, false はコンパイラが直接解釈する
+    - true, false, xor はコンパイラが直接解釈する
     - write_ppm_header あたりの出力関数を、バイナリ形式で出力するように変更
 *)
 
-let rec xor x y = if x then not y else y in
 let rec tan x = sin x /. cos x in
 
 (******************************************************************************

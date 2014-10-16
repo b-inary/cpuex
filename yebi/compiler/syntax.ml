@@ -18,6 +18,7 @@ type t =
   | Eq of t * t
   | LE of t * t
   | If of t * t * t
+  | Xor of t * t
   | Let of (Id.t * Type.t) * t * t
   | Var of Id.t
   | LetRec of fundef * t
@@ -49,6 +50,7 @@ let rec to_string = function
   | Eq (e1, e2) -> "(Eq " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
   | LE (e1, e2) -> "(LE " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
   | If (e1, e2, e3) -> "(If " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ", " ^ (to_string e3) ^ ")"
+  | Xor (e1, e2) -> "(Xor " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
   | Let ((id, _), e1, e2) -> "(Let " ^ id ^ ", " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
   | Var id -> "(Var " ^ id ^ ")"
   | LetRec ({name=(n,_);body=e1}, e2) -> "(LetRec " ^ n ^ ", " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"

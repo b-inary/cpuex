@@ -97,7 +97,7 @@ let rec g env = function
         (fun x -> insert_let (g env e2) (fun y -> (FMul (x, y), Type.Float)))
   | Syntax.Eq _ | Syntax.LE _ as cmp ->
       g env (Syntax.If (cmp, Syntax.Bool true, Syntax.Bool false))
-  | Syntax.If (Syntax.Not e1, e2, e3) -> g env (Syntax.If(e1, e3, e2))
+  | Syntax.If (Syntax.Not e1, e2, e3) -> g env (Syntax.If (e1, e3, e2))
   | Syntax.If (Syntax.Eq (e1, e2), e3, e4) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2)
@@ -112,8 +112,12 @@ let rec g env = function
             let e3', t3 = g env e3 in
             let e4', t4 = g env e4 in
             IfLE (x, y, e3', e4'), t3))
+  | Syntax.If (Syntax.Xor (e1, e2), e3, e4) ->
+      g env (Syntax.If (Syntax.Eq (e1, e2), e4, e3))
   | Syntax.If (e1, e2, e3) ->
       g env (Syntax.If (Syntax.Eq (e1, Syntax.Bool false), e3, e2))
+  | Syntax.Xor (e1, e2) ->
+      g env (Syntax.If (Syntax.Eq (e1, e2), Syntax.Bool false, Syntax.Bool true))
   | Syntax.Let ((x, t), e1, e2) ->
       let e1', t1 = g env e1 in
       let e2', t2 = g (M.add x t env) e2 in
