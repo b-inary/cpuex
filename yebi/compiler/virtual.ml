@@ -40,6 +40,18 @@ let rec g env = function
       (match M.find x env with
         | Type.Bool | Type.Int | Type.Float -> Ans (IfLE (x, y, g env e1, g env e2))
         | _ -> failwith "inequality supported only for bool, int, and float")
+  | Closure.IfEqZ (x, e1, e2) ->
+      (match M.find x env with
+        | Type.Bool | Type.Int | Type.Float -> Ans (IfEq (x, "$0", g env e1, g env e2))
+        | _ -> failwith "equality supported only for bool, int, and float")
+  | Closure.IfLEZ (x, e1, e2) ->
+      (match M.find x env with
+        | Type.Bool | Type.Int | Type.Float -> Ans (IfLE (x, "$0", g env e1, g env e2))
+        | _ -> failwith "equality supported only for bool, int, and float")
+  | Closure.IfGEZ (x, e1, e2) ->
+      (match M.find x env with
+        | Type.Bool | Type.Int | Type.Float -> Ans (IfLE ("$0", x, g env e1, g env e2))
+        | _ -> failwith "equality supported only for bool, int, and float")
   | Closure.Let ((x, t1), e1, e2) ->
       let e1' = g env e1 in
       let e2' = g (M.add x t1 env) e2 in

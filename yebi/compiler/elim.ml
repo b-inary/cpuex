@@ -3,7 +3,9 @@ open KNormal
 
  (* 副作用の有無 *)
 let rec effect = function
-  | Let (_, e1, e2) | IfEq (_, _, e1, e2) | IfLE (_, _, e1, e2) -> effect e1 || effect e2
+  | Let (_, e1, e2) | IfEq (_, _, e1, e2) | IfLE (_, _, e1, e2)
+  | IfEqZ (_, e1, e2) | IfLEZ (_, e1, e2) | IfGEZ (_, e1, e2) ->
+      effect e1 || effect e2
   | LetRec (_, e) | LetTuple (_, _, e) -> effect e
   | App _ | Store _ | ExtFunApp _ -> true
   | _ -> false
@@ -12,6 +14,9 @@ let rec effect = function
 let rec f = function
   | IfEq (x, y, e1, e2) -> IfEq (x, y, f e1, f e2)
   | IfLE (x, y, e1, e2) -> IfLE (x, y, f e1, f e2)
+  | IfEqZ (x, e1, e2) -> IfEqZ (x, f e1, f e2)
+  | IfLEZ (x, e1, e2) -> IfLEZ (x, f e1, f e2)
+  | IfGEZ (x, e1, e2) -> IfGEZ (x, f e1, f e2)
   | Let ((x, t), e1, e2) ->
       let e1' = f e1 in let e2' = f e2 in
       if effect e1' || S.mem x (fv e2') then Let((x, t), e1', e2') else

@@ -160,7 +160,6 @@ and g'_args oc x_reg_cl ys =
     (shuffle reg_sw yrs)
 
 let h oc { name = Id.L x; args = _; body = e; ret = _; local = c } =
-  Printf.fprintf oc ".global %s\n" x;
   Printf.fprintf oc "%s:\n" x;
   if c > 0 then Printf.fprintf oc "    sub     $sp, $sp, %d\n" c;
   stackset := S.empty;

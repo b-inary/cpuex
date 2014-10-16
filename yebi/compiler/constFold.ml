@@ -57,9 +57,13 @@ let rec g env = function
   | FMul (x, y) when memf x env && memf y env -> Float (findf x env *. findf y env)
   | IfEq (x, y, e1, e2) when memi x env && memi y env -> if findi x env = findi y env then g env e1 else g env e2
   | IfEq (x, y, e1, e2) when memf x env && memf y env -> if findf x env = findf y env then g env e1 else g env e2
+  | IfEq (x, y, e1, e2) when (memi x env && findi x env = 0) || (memf x env && findf x env = 0.0) -> IfEqZ (y, g env e1, g env e2)
+  | IfEq (x, y, e1, e2) when (memi y env && findi y env = 0) || (memf y env && findf y env = 0.0) -> IfEqZ (x, g env e1, g env e2)
   | IfEq (x, y, e1, e2) -> IfEq (x, y, g env e1, g env e2)
   | IfLE (x, y, e1, e2) when memi x env && memi y env -> if findi x env <= findi y env then g env e1 else g env e2
   | IfLE (x, y, e1, e2) when memf x env && memf y env -> if findf x env <= findf y env then g env e1 else g env e2
+  | IfLE (x, y, e1, e2) when (memi x env && findi x env = 0) || (memf x env && findf x env = 0.0) -> IfGEZ (y, g env e1, g env e2)
+  | IfLE (x, y, e1, e2) when (memi y env && findi y env = 0) || (memf y env && findf y env = 0.0) -> IfLEZ (y, g env e1, g env e2)
   | IfLE (x, y, e1, e2) -> IfLE (x, y, g env e1, g env e2)
   | Let ((x, t), e1, e2) ->
       let e1' = g env e1 in

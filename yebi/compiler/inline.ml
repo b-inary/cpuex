@@ -6,7 +6,7 @@ open KNormal
 let threshold = ref 0
 
 let rec size = function
-  | IfEq (_, _, e1, e2) | IfLE (_, _, e1, e2)
+  | IfEq (_, _, e1, e2) | IfLE (_, _, e1, e2) | IfEqZ (_, e1, e2) | IfLEZ (_, e1, e2) | IfGEZ (_, e1, e2)
   | Let (_, e1, e2) | LetRec ({ body = e1 }, e2) ->
       1 + size e1 + size e2
   | LetTuple (_, _, e) -> 1 + size e
@@ -16,6 +16,9 @@ let rec size = function
 let rec g env = function
   | IfEq (x, y, e1, e2) -> IfEq (x, y, g env e1, g env e2)
   | IfLE (x, y, e1, e2) -> IfLE (x, y, g env e1, g env e2)
+  | IfEqZ (x, e1, e2) -> IfEqZ (x, g env e1, g env e2)
+  | IfLEZ (x, e1, e2) -> IfLEZ (x, g env e1, g env e2)
+  | IfGEZ (x, e1, e2) -> IfGEZ (x, g env e1, g env e2)
   | Let (xt, e1, e2) -> Let (xt, g env e1, g env e2)
   | LetRec ({ name = (x, t); args = yts; body = e1 }, e2) ->
       let env = if size e1 > !threshold then env else M.add x (yts, e1) env in

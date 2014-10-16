@@ -16,8 +16,11 @@ type t =
   | FAbs of Id.t
   | FAdd of Id.t * Id.t
   | FMul of Id.t * Id.t
-  | IfEq of Id.t * Id.t * t * t   (* 比較 + 分岐 *)
-  | IfLE of Id.t * Id.t * t * t   (* 比較 + 分岐 *)
+  | IfEq of Id.t * Id.t * t * t
+  | IfLE of Id.t * Id.t * t * t
+  | IfEqZ of Id.t * t * t
+  | IfLEZ of Id.t * t * t
+  | IfGEZ of Id.t * t * t
   | Let of (Id.t * Type.t) * t * t
   | Var of Id.t
   | LetRec of fundef * t
@@ -42,6 +45,7 @@ let rec fv = function
   | Neg x | Addi (x, _) | Shift (x, _) | FNeg x | FAbs x | Load (x, _) -> S.singleton x
   | Add (x, y) | Add4 (x, y, _) | Sub (x, y) | FAdd (x, y) | FMul (x, y) | Store (x, y, _) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2) | IfLE (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
+  | IfEqZ (x, e1, e2) | IfLEZ (x, e1, e2) | IfGEZ (x, e1, e2) -> S.add x (S.union (fv e1) (fv e2))
   | Let ((x, t), e1, e2) -> S.union (fv e1) (S.remove x (fv e2))
   | Var x -> S.singleton x
   | LetRec ({ name = (x, t); args = yts; body = e1 }, e2) ->

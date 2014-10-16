@@ -7,6 +7,9 @@ open KNormal
 let rec f = function
   | IfEq (x, y, e1, e2) -> IfEq (x, y, f e1, f e2)
   | IfLE (x, y, e1, e2) -> IfLE (x, y, f e1, f e2)
+  | IfEqZ (x, e1, e2) -> IfEqZ (x, f e1, f e2)
+  | IfLEZ (x, e1, e2) -> IfLEZ (x, f e1, f e2)
+  | IfGEZ (x, e1, e2) -> IfGEZ (x, f e1, f e2)
   | Let (xt, e1, e2) ->
       let rec insert = function
         | Let (yt, e3, e4) -> Let (yt, e3, insert e4)
