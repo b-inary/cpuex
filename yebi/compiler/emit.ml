@@ -171,8 +171,6 @@ let f oc (Prog (data, fundefs, e, c)) =
   List.iter (fun (Id.L x, f) -> Printf.fprintf oc "%-s:\n    .float  %.15g\n" x f) (List.rev (snd data));
   List.iter (fun fundef -> h oc fundef) fundefs;
   Printf.fprintf oc ".global main\nmain:\n";
-  Printf.fprintf oc "    mov     $1, 0x4001\n";
-  Printf.fprintf oc "    mov     [0x4000], $1\n";
   if c > 0 then Printf.fprintf oc "    sub     $sp, $sp, %d\n" c;
   stackset := S.empty;
   stackmap := [];
