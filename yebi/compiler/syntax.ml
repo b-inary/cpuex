@@ -17,6 +17,7 @@ type t =
   | FMul of t * t
   | Eq of t * t
   | LE of t * t
+  | LEF of t * t
   | If of t * t * t
   | Xor of t * t
   | Let of (Id.t * Type.t) * t * t
@@ -49,6 +50,7 @@ let rec to_string = function
   | FMul (e1, e2) -> "(FMul " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
   | Eq (e1, e2) -> "(Eq " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
   | LE (e1, e2) -> "(LE " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
+  | LEF (e1, e2) -> "(LEF " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
   | If (e1, e2, e3) -> "(If " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ", " ^ (to_string e3) ^ ")"
   | Xor (e1, e2) -> "(Xor " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"
   | Let ((id, _), e1, e2) -> "(Let " ^ id ^ ", " ^ (to_string e1) ^ ", " ^ (to_string e2) ^ ")"

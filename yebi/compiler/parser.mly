@@ -113,11 +113,11 @@ exp:
 | FEQUAL simple_exp simple_exp
     %prec prec_app          { Eq ($2, $3) }
 | FLESS simple_exp simple_exp
-    %prec prec_app          { Not (LE ($3, $2)) }
+    %prec prec_app          { Not (LEF ($3, $2)) }
 | FISPOS simple_exp
-    %prec prec_app          { Not (LE ($2, Float 0.0)) }
+    %prec prec_app          { Not (LEF ($2, Float 0.0)) }
 | FISNEG simple_exp
-    %prec prec_app          { Not (LE (Float 0.0, $2)) }
+    %prec prec_app          { Not (LEF (Float 0.0, $2)) }
 | FISZERO simple_exp
     %prec prec_app          { Eq ($2, Float 0.0) }
 | FHALF simple_exp

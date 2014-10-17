@@ -36,6 +36,7 @@ let rec deref_term = function
   | Div (e1, e2) -> Div (deref_term e1, deref_term e2)
   | Eq  (e1, e2) -> Eq  (deref_term e1, deref_term e2)
   | LE  (e1, e2) -> LE  (deref_term e1, deref_term e2)
+  | LEF (e1, e2) -> LEF (deref_term e1, deref_term e2)
   | FNeg e -> FNeg (deref_term e)
   | FAbs e -> FAbs (deref_term e)
   | FAdd (e1, e2) -> FAdd (deref_term e1, deref_term e2)
@@ -112,8 +113,16 @@ let rec g env e =
           unify Type.Float (g env e1);
           unify Type.Float (g env e2);
           Type.Float
-      | Eq (e1, e2) | LE (e1, e2) ->
+      | Eq (e1, e2) ->
           unify (g env e1) (g env e2);
+          Type.Bool
+      | LE (e1, e2) ->
+          unify Type.Int (g env e1);
+          unify Type.Int (g env e2);
+          Type.Bool
+      | LEF (e1, e2) ->
+          unify Type.Float (g env e1);
+          unify Type.Float (g env e2);
           Type.Bool
       | If (e1, e2, e3) ->
           unify Type.Bool (g env e1);
