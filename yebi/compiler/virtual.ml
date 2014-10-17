@@ -22,6 +22,7 @@ let add_int_data i =
     idata := (l, i) :: !idata; l
 
 let add_float_data f =
+  let f = if f = -0. then 0. else f in
   try fst (List.find (fun (_, f') -> f = f') !fdata)
   with Not_found ->
     let l = Id.L (Id.genid "flt") in

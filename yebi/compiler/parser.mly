@@ -92,7 +92,7 @@ exp:
 | exp PLUS_DOT exp          { FAdd ($1, $3) }
 | exp MINUS_DOT exp         { FAdd ($1, FNeg $3) }
 | exp AST_DOT exp           { FMul ($1, $3) }
-| exp SLASH_DOT exp         { App (Var "fdiv", [$1; $3]) }
+| exp SLASH_DOT exp         { FMul ($1, App (Var "finv", [$3])) }
 | LET IDENT EQUAL exp IN exp
     %prec prec_let          { Let (addtyp $2, $4, $6) }
 | LET REC fundef IN exp
