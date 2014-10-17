@@ -121,10 +121,8 @@ def on_sub(operands):
     return mkop(1, operands[0], operands[1], operands[2], '0')
 
 def on_shift(operands):
-    check_operands_n(operands, 3)
-    success, imm = parse_imm(operands[2])
-    check_imm_range(imm, -32, 31)
-    return mkop(2, operands[0], operands[1], '$0', operands[2])
+    check_operands_n(operands, 4)
+    return mkop(2, operands[0], operands[1], operands[2], operands[3])
 
 def on_fneg(operands):
     check_operands_n(operands, 2)
@@ -252,15 +250,24 @@ def expand_neg(operands):
     check_operands_n(operands, 2)
     return ['sub {}, $0, {}'.format(operands[0], operands[1])]
 
+def expand_shift(operands):
+    check_operands_n(operands, 3, 4)
+    if len(operands) == 4:
+        return ['shift {}'.format(', '.join(operands))]
+    success, base, offset = parse_addr(operands[2])
+    if not success:
+        error('invalid syntax')
+    return ['shift {}, {}, {}, {}'.format(operands[0], operands[1], base, offset)]
+
 def expand_shl(operands):
     check_operands_n(operands, 3)
-    return ['shift {}'.format(', '.join(operands))]
+    return ['shift {}, {}, $0, {}'.format(operands[0], operands[1], operands[2])]
 
 def expand_shr(operands):
     check_operands_n(operands, 3)
     success, imm = parse_imm(operands[2])
     if success:
-        return ['shift {}, {}, {}'.format(operands[0], operands[1], str(-imm))]
+        return ['shift {}, {}, $0, {}'.format(operands[0], operands[1], str(-imm))]
     error('invalid syntax')
 
 def expand_fsub(operands):
@@ -367,6 +374,7 @@ macro_table = {
     'add':      expand_add,
     'sub':      expand_sub,
     'neg':      expand_neg,
+    'shift':    expand_shift,
     'shl':      expand_shl,
     'shr':      expand_shr,
     'fsub':     expand_fsub,

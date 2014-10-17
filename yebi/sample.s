@@ -15,7 +15,7 @@ main:
     # primitive mnemonics
     add     $1, $2, $3, 4
     sub     $1, $2, $3
-    shift   $1, $2, 3
+    shift   $1, $2, $3, 4
     fneg    $1, $2
     fadd    $1, $2, $3
     fmul    $1, $2, $3
@@ -41,6 +41,7 @@ main:
     add     $1, $2, 3
     sub     $1, $2, 3
     neg     $1, $2
+    shift   $1, $2, $3 + 4
     shl     $1, $2, 3
     shr     $1, $2, 3
     fsub    $1, $2, $3
