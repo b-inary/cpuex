@@ -44,7 +44,13 @@ let al s = lines := s :: !lines
 
 let rec print_rev oc = function
   | [] -> ()
-  | l :: ls -> print_rev oc ls; Printf.fprintf oc "%s" l
+  | l :: ls ->
+      print_rev oc ls;
+      if l = "pop stack" then
+        (let sz = stacksize () in
+         if sz > 0 then Printf.fprintf oc "    add     $sp, $sp, %d\n" sz)
+      else
+        Printf.fprintf oc "%s" l
 
 let addr x y =
   if x = "$0" then
@@ -118,9 +124,11 @@ and g' oc = function
   | (Tail, CallCls (x, ys)) ->
       g'_args oc [(x, reg_cl)] ys;
       al (Printf.sprintf "    mov     %s, [%s]\n" reg_sw reg_cl);
+      al ("pop stack");
       al (Printf.sprintf "    br      %s\n" reg_sw)
   | (Tail, CallDir (Id.L x, ys)) ->
       g'_args oc [] ys;
+      al ("pop stack");
       al (Printf.sprintf "    br      %s\n" x)
   | (NonTail a, CallCls (x, ys)) ->
       g'_args oc [(x, reg_cl)] ys;
