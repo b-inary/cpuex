@@ -1,8 +1,7 @@
 
 read_char:
     read    $1
-    shr     $12, $1, 8
-    beq     $12, $0, read_char_end
+    bge     $1, $0, read_char_end
     br      read_char
 read_char_end:
     ret
@@ -15,6 +14,9 @@ main:
     mov     $5, 0x4001      # write address
     mov     $6, 3           # halt counter
     mov     $7, [halt_code]
+    mov     $sp, 1
+    shl     $sp, $sp, 20
+    mov     $bp, $sp
 loop:
     call    read_char
     mov     $4, $1
