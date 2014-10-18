@@ -114,9 +114,9 @@ ftoi_abs:                       # } else {
 floor_C1:
     .int    0x4b000000          # float(2**23)
 floor_C2:
-    .float  1
+    .float  1.0
 floor_C3:
-    .float  -1
+    .float  -1.0
 .global floor
 floor:
     mov     $2, [floor_C1]
@@ -177,17 +177,79 @@ floor_L4:
     # ret
 
 
-# <library> inverse
+# <library> inverse(x)
+# no check for exponent = 0, 253-255
+finv_C1:
+    .float  0.5
+finv_C2:
+    .float  2.0
+finv_C3:
+    .float  -1.8823529          # -32.0 / 17.0
+finv_C4:
+    .float   2.8235294          #  48.0 / 17.0
 .global finv
 finv:
-    # TODO
+    shr     $2, $1, 23
+    neg     $2, $2              # sign($2) = sign($1);
+    add     $2, $2, 253         # exponent($2) = 253 - exponent($1);
+    shl     $2, $2, 23          # fraction($2) = 0;
+    mov     $3, [finv_C1]
+    shl     $1, $1, 9
+    shr     $1, $1, 9           # sign($1) = 0;
+    add     $1, $1, $3          # exponent($1) = 126;
+    mov     $3, [finv_C3]
+    mov     $4, [finv_C4]
+    fmul    $3, $1, $3          # // initial guess
+    fadd    $3, $3, $4          # $3 = -32/17 * $1 + 48/17;
+    mov     $5, [finv_C2]
+    fmul    $4, $1, $3
+    fneg    $4, $4
+    fadd    $4, $4, $5          # // repeat 3 times
+    fmul    $3, $3, $4          # $3 *= 2.0 - $1 * $3;
+    fmul    $4, $1, $3
+    fneg    $4, $4
+    fadd    $4, $4, $5
+    fmul    $3, $3, $4
+    fmul    $4, $1, $3
+    fneg    $4, $4
+    fadd    $4, $4, $5
+    fmul    $3, $3, $4
+    fmul    $1, $2, $3          # return $2 * $3;
     ret
 
 
-# <library> square root
+# <library> square_root(x)
+# no check for negative number
+sqrt_C1:
+    .float  0.5
+sqrt_C2:
+    .float  1.5
+sqrt_C3:
+    .int    0x5f375a86          # magic number
 .global sqrt
 sqrt:
-    # TODO
+    mov     $4, [sqrt_C1]
+    mov     $5, [sqrt_C2]
+    mov     $3, [sqrt_C3]
+    shr     $2, $1, 1           # // initial guess for invsqrt($1)
+    sub     $2, $3, $2          # $2 = 0x5f375a86 - ($1 >> 1);
+    fmul    $4, $1, $4          # $4 = 0.5 * $1;
+    fmul    $3, $2, $4
+    fmul    $3, $2, $3
+    fneg    $3, $3
+    fadd    $3, $3, $5          # // repeat 3 times
+    fmul    $2, $2, $3          # $2 *= 1.5 - $2 * $2 * $4;
+    fmul    $3, $2, $4
+    fmul    $3, $2, $3
+    fneg    $3, $3
+    fadd    $3, $3, $5
+    fmul    $2, $2, $3
+    fmul    $3, $2, $4
+    fmul    $3, $2, $3
+    fneg    $3, $3
+    fadd    $3, $3, $5
+    fmul    $2, $2, $3
+    fmul    $1, $1, $2          # return $1 * $2;
     ret
 
 
@@ -335,8 +397,82 @@ kernel_cos:
 
 
 # <library> arctangent(x)
+atan_C1:
+    .float  0.4375
+atan_C2:
+    .float  2.4375
+atan_C3:
+    .float  -1.0
 .global atan
 atan:
-    # TODO
+    shr     $9, $1, 31
+    shl     $9, $9, 31          # $9 = sign($1);
+    shl     $1, $1, 1
+    shr     $1, $1, 1           # $1 = fabs($1);
+    mov     $2, [atan_C1]
+    bge     $1, $2, atan_L1     # if ($1 < 0.4375) {
+    call    kernel_atan         #   $1 = kernel_atan($1);
+    add     $1, $1, $9          #   return $1 + $9;
+    ret
+atan_L1:
+    mov     $2, [atan_C2]
+    bge     $1, $2, atan_L2     # } else if ($1 < 2.4375) {
+    mov     $2, [atan_C3]
+    fadd    $8, $1, $2          #   $8 = $1 - 1.0;
+    fneg    $2, $2
+    fadd    $1, $1, $2
+    call    finv                #   $1 = finv($1 + 1.0);
+    fmul    $1, $1, $8
+    call    kernel_atan         #   $1 = kernel_atan($1 * $8);
+    mov     $2, [pi_q]
+    fadd    $1, $1, $2          #   $1 += PI/4;
+    add     $1, $1, $9          #   return $1 + $9;
+    ret                         #
+atan_L2:                        # } else {
+    call    finv                #   $1 = finv($1);
+    call    kernel_atan         #   $1 = kernel_atan($1);
+    mov     $2, [pi_h]
+    fneg    $1, $1
+    fadd    $1, $1, $2          #   $1 = PI/2 - $1;
+    add     $1, $1, $9          #   return $1 + $9;
+    ret                         # }
+
+# kernel_atan(x)  [$8, $9: reserved]
+katan_C0:
+    .float   1.0
+katan_C1:
+    .float  -0.3333333
+katan_C2:
+    .float   0.2
+katan_C3:
+    .float  -0.142857149
+katan_C4:
+    .float   0.111111104
+katan_C5:
+    .float  -0.089764461
+katan_C6:
+    .float   0.060035486
+kernel_atan:
+    mov     $3, [katan_C6]
+    mov     $4, [katan_C5]
+    mov     $5, [katan_C4]
+    mov     $6, [katan_C3]
+    fmul    $2, $1, $1
+    fmul    $3, $2, $3
+    fadd    $3, $3, $4
+    fmul    $3, $2, $3
+    fadd    $3, $3, $5
+    fmul    $3, $2, $3
+    fadd    $3, $3, $6
+    fmul    $3, $2, $3
+    mov     $4, [katan_C2]
+    mov     $5, [katan_C1]
+    mov     $6, [katan_C0]
+    fadd    $3, $3, $4
+    fmul    $3, $2, $3
+    fadd    $3, $3, $5
+    fmul    $3, $2, $3
+    fadd    $3, $3, $6
+    fmul    $1, $1, $3
     ret
 
