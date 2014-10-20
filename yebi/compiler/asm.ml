@@ -45,6 +45,8 @@ let reg_bp = "$bp" (* base pointer *)
 let reg_cl = regs.(Array.length regs - 1) (* closure address *)
 let reg_sw = regs.(Array.length regs - 2) (* temporary for swap *)
 
+let heap_addr = 0x4000
+
 let is_reg x = (x.[0] = '$')
 
 let rec remove_and_uniq xs = function

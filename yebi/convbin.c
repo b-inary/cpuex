@@ -5,7 +5,6 @@
 #include <memory.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,22 +33,21 @@ typedef union {
 } fi_union;
 
 
-
-/* ungetc data for my_ungetc() function */
-static int ungetc_char = EOF;
-
-/* output PPM file stream */
-static FILE* ppmout = NULL;   
-
 /* the binary image of the input SLD data */
 #define MAX_N_WORDS 4096
 static fi_union sld_words[MAX_N_WORDS];
 static unsigned sld_n_words = 0;
 
-/* for computation time measurement */
-static struct timeval startTime;
-static struct timeval endTime;
 
+static int error_flag = 0;
+void error(char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap,fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+  error_flag = 1;
+}
 
 
 /*****************************************************************************
@@ -226,12 +224,12 @@ static void load_sld_file(const char* sld_file_name, BOOL conv_to_big_endian)
  *  main part
  ******************************************************************************/
 
-int main(int argc, char* argv[])
+int main()
 {
   /* load SLD data */
   load_sld_file(NULL, TRUE);
   
-  int i;
+  unsigned i;
   for (i = 0; i < sld_n_words * 4; ++i)
     putchar(((char*)sld_words)[i]);
     

@@ -88,9 +88,9 @@ let rec g env = function
                (fun y _ offset store_fv -> seq (St (y, x, offset), store_fv)) in
       let y = Id.genid "l" in
       let z = Id.genid "l" in
-      Let ((x, t), Ld ("$0", 0x4000),
+      Let ((x, t), Ld ("$0", heap_addr),
       Let ((y, Type.Int), Addi (x, offset),
-      seq (St (y, "$0", 0x4000),
+      seq (St (y, "$0", heap_addr),
       Let ((z, Type.Int), MovL l, seq (St (z, x, 0), store_fv)))))
   | Closure.AppCls (x, ys) -> Ans (CallCls (x, ys))
   | Closure.AppDir (x, ys) -> Ans (CallDir (x, ys))
@@ -100,9 +100,9 @@ let rec g env = function
       let (offset, store) =
         expand (List.map (fun x -> (x, M.find x env)) xs) (0, Ans (Mov y))
                (fun x _ offset store -> seq (St (x, y, offset), store)) in
-      Let ((y, Type.Tuple (List.map (fun x -> M.find x env) xs)), Ld ("$0", 0x4000),
+      Let ((y, Type.Tuple (List.map (fun x -> M.find x env) xs)), Ld ("$0", heap_addr),
       Let ((z, Type.Int), Addi (y, offset),
-      seq (St (z, "$0", 0x4000), store)))
+      seq (St (z, "$0", heap_addr), store)))
   | Closure.LetTuple (xts, y, e2) ->
       let s = Closure.fv e2 in
       let (offset, load) =

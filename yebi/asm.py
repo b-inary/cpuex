@@ -332,8 +332,8 @@ def expand_call(operands):
 def expand_ret(operands):
     check_operands_n(operands, 0)
     return [
-        'load $sp, $bp, 0',
-        'beq $0, $0, $sp, 4'
+        'load $12, $bp, 0',
+        'beq $0, $0, $12, 4'
     ]
 
 def expand_halt(operands):
@@ -399,6 +399,7 @@ macro_table = {
 # ----------------------------------------------------------------------
 
 labels = {}
+rev_labels = {}
 
 def add_label(label, i):
     dic = labels.get(label, {})
@@ -407,6 +408,7 @@ def add_label(label, i):
     val = dic.get(filename, [-1, False, False])
     dic[filename] = [i, val[1], False]
     labels[label] = dic
+    rev_labels[i] = rev_labels.get(i, []) + [label]
 
 def add_global(label):
     dic = labels.get(label, {})
@@ -442,6 +444,11 @@ def warn_unused_label(label):
     if not labels[label][filename][2] and not (filename == library and labels[label][filename][1]):
         print >> sys.stderr, '{}:{}: warning: unused label \'{}\''.format(filename, pos, label)
 
+def show_label(i):
+    if i in rev_labels:
+        return '# {}'.format(', '.join(rev_labels[i]))
+    return ''
+
 
 # ----------------------------------------------------------------------
 #       main process
@@ -463,6 +470,7 @@ if args.l:
     library = args.l
 if os.path.isfile(library) and library not in args.inputs:
     args.inputs.append(library)
+library = re.sub(r'.*[/\\]', '', library)
 
 # 0. preprocess
 lines0 = [('nop', '', 0), ('br main', '_main', 0)]
@@ -529,6 +537,6 @@ with open(args.o, 'w') as f:
         f.write(byterepr)
 if args.s:
     with open(args.o + '.s', 'w') as f:
-        for line, filename, pos in lines3:
+        for i, (line, filename, pos) in enumerate(lines3):
             mnemonic, operands = parse(line)
-            f.write('{:7} {}\n'.format(mnemonic, ', '.join(operands)))
+            f.write('{:7} {:19} {}'.format(mnemonic, ', '.join(operands), show_label(i)).strip() + '\n')
