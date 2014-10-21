@@ -464,6 +464,11 @@ args = argparser.parse_args()
 if args.inputs == []:
     prog = re.sub(r'.*[/\\]', '', sys.argv[0])
     print >> sys.stderr, 'usage: {} [options] file...'.format(prog)
+    print >> sys.stderr, ''
+    print >> sys.stderr, '  -l\tset library file to <file> (default: {})'.format(library)
+    print >> sys.stderr, '  -o\tset output file to <file>'
+    print >> sys.stderr, '  -s\toutput primitive assembly'
+    print >> sys.stderr, ''
     print >> sys.stderr, '{}: error: no input files'.format(prog)
     sys.exit(1)
 if args.l:
