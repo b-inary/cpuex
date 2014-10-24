@@ -460,6 +460,7 @@ argparser.add_argument('inputs', nargs='*', help='input files', metavar='files..
 argparser.add_argument('-l', help='set library file to <file> (default: {})'.format(library), metavar='<file>')
 argparser.add_argument('-o', help='set output file to <file>', metavar='<file>')
 argparser.add_argument('-s', action='store_const', const=True, help='output primitive assembly')
+argparser.add_argument('-k', action='store_const', const=True, help='output as array of std_logic_vector format')
 args = argparser.parse_args()
 if args.inputs == []:
     prog = re.sub(r'.*[/\\]', '', sys.argv[0])
@@ -536,10 +537,15 @@ if not args.o:
     m = re.match(r'(.*)\.', args.inputs[0])
     args.o = '{}.out'.format(m.group(1) if m else args.inputs[0])
 with open(args.o, 'w') as f:
-    for line, filename, pos in lines3:
+    for i, (line, filename, pos) in enumerate(lines3):
         mnemonic, operands = parse(line)
         byterepr = table[mnemonic](operands)
-        f.write(byterepr)
+        if args.k:
+            f.write("{} => x\"{}\",\n".format(i, ''.join('{:02x}'.format(ord(x)) for x in byterepr)))
+        else:
+            f.write(byterepr)
+    if args.k:
+        f.write("others => (others => '0')\n")
 if args.s:
     with open(args.o + '.s', 'w') as f:
         for i, (line, filename, pos) in enumerate(lines3):
