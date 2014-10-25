@@ -3,6 +3,9 @@
 .global read_char
 read_char:
     read    $1
+    bge     $1, $0, read_char_end
+    br      read_char
+read_char_end:
     ret
 
 # <library> write 1byte
@@ -16,10 +19,15 @@ print_char:
 read_int:
 .global read_float
 read_float:
-    read    $1
-    read    $2
-    read    $3
-    read    $4
+    call read_char
+    mov $5, $1
+    call read_char
+    mov $2, $1
+    call read_char
+    mov $3, $1
+    call read_char
+    mov $4, $1
+    mov $1, $5
     shl     $1, $1, 24
     shl     $2, $2, 16
     shl     $3, $3,  8
