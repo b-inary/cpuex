@@ -461,6 +461,7 @@ argparser.add_argument('-l', help='set library file to <file> (default: {})'.for
 argparser.add_argument('-o', help='set output file to <file>', metavar='<file>')
 argparser.add_argument('-s', action='store_const', const=True, help='output primitive assembly')
 argparser.add_argument('-k', action='store_const', const=True, help='output as array of std_logic_vector format')
+argparser.add_argument('-a', action='store_const', const=True, help='output as rs232c send test format')
 args = argparser.parse_args()
 if args.inputs == []:
     prog = re.sub(r'.*[/\\]', '', sys.argv[0])
@@ -542,6 +543,26 @@ with open(args.o, 'w') as f:
         byterepr = table[mnemonic](operands)
         if args.k:
             f.write("{} => x\"{}\",\n".format(i, ''.join('{:02x}'.format(ord(x)) for x in byterepr)))
+        elif args.a:
+            fmt = """
+            wait for BR; RS_RX <= '0';
+            wait for BR; RS_RX <= '{}';
+            wait for BR; RS_RX <= '{}';
+            wait for BR; RS_RX <= '{}';
+            wait for BR; RS_RX <= '{}';
+            wait for BR; RS_RX <= '{}';
+            wait for BR; RS_RX <= '{}';
+            wait for BR; RS_RX <= '{}';
+            wait for BR; RS_RX <= '{}';
+            wait for BR; RS_RX <= '1';
+
+            wait for (2 * BR);
+
+            """
+            for b in byterepr:
+                a = ord(b)
+                ps = ['1' if a & (1 << j) else '0' for j in range(8)]
+                f.write(fmt.format(*ps))
         else:
             f.write(byterepr)
     if args.k:
