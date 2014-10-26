@@ -19,18 +19,16 @@ print_char:
 read_int:
 .global read_float
 read_float:
-    call read_char
-    mov $5, $1
-    call read_char
-    mov $2, $1
-    call read_char
-    mov $3, $1
-    call read_char
-    mov $4, $1
-    mov $1, $5
-    shl     $1, $1, 24
-    shl     $2, $2, 16
-    shl     $3, $3,  8
+    call    read_char
+    mov     $4, $1
+    call    read_char
+    mov     $3, $1
+    call    read_char
+    mov     $2, $1
+    call    read_char
+    shl     $2, $2,  8
+    shl     $3, $3, 16
+    shl     $4, $4, 24
     add     $1, $1, $2
     add     $3, $3, $4
     add     $1, $1, $3
