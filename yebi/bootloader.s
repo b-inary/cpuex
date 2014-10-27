@@ -42,5 +42,7 @@ decr_count:
     br      loop
 end:
     mov     [0x4000], $5
+    mov     $1, 170             # print 0xAA
+    write   $1
     br      0x4001
 
