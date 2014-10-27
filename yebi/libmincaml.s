@@ -12,10 +12,6 @@ read_char_end:
 .global print_char
 print_char:
     write   $1
-    mov     $9, 500
-print_char_loop:
-    sub     $9, $9, 1
-    bge     $9, $0, print_char_loop
     ret
 
 # <library> read 4bytes (big endian)
@@ -43,15 +39,13 @@ read_float:
 print_int:
 .global print_float
 print_float:
-    mov     $2, $1
-    shr     $1, $2, 24
-    call    print_char
-    shr     $1, $2, 16
-    call    print_char
-    shr     $1, $2,  8
-    call    print_char
-    mov     $1, $2
-    call    print_char
+    shr     $4, $1, 24
+    shr     $3, $1, 16
+    shr     $2, $1,  8
+    write   $4
+    write   $3
+    write   $2
+    write   $1
     ret
 
 
