@@ -117,70 +117,70 @@ ftoi_abs:                       # } else {
 
 
 # <library> floor(x)
-floor_C1:
-    .int    0x4b000000          # float(2**23)
-floor_C2:
-    .float  1.0
-floor_C3:
-    .float  -1.0
-.global floor
-floor:
-    mov     $2, [floor_C1]
-    bge     $1, $2, floor_L4    # if ($1 >= 2**23) return $1;
-    fadd    $3, $1, $2
-    ble     $3, $0, floor_L4    # if ($1 <= -2**23) return $1;
-    bge     $1, $0, floor_L2    # if ($1 < 0) {
-    fneg    $3, $1              #   $3 = fabs($1);
-    fadd    $1, $2, $3          #   $1 = $3 + 2**23;
-    fneg    $2, $2
-    fadd    $1, $1, $2          #   $1 -= 2**23;
-    bge     $1, $3, floor_L1    #   if ($1 < $3) {
-    mov     $2, [floor_C2]
-    fadd    $1, $1, $2          #     $1 += 1.0;
-floor_L1:                       #   }
-    fneg    $1, $1              #   return -$1;
-    ret
-floor_L2:                       # } else {
-    fadd    $3, $1, $2          #   $3 = $1 + 2**23
-    fneg    $2, $2
-    fadd    $2, $2, $3          #   $2 = $3 - 2**23
-    ble     $2, $1, floor_L3    #   if ($2 > $1) {
-    mov     $3, [floor_C3]
-    fadd    $1, $2, $3          #     return $2 - 1.0;
-    ret
-floor_L3:                       #   }
-    mov     $1, $2              #   return $2;
-floor_L4:
-    ret                         # }
+# floor_C1:
+    # .int    0x4b000000          # float(2**23)
+# floor_C2:
+    # .float  1.0
+# floor_C3:
+    # .float  -1.0
+# .global floor
+# floor:
+    # mov     $2, [floor_C1]
+    # bge     $1, $2, floor_L4    # if ($1 >= 2**23) return $1;
+    # fadd    $3, $1, $2
+    # ble     $3, $0, floor_L4    # if ($1 <= -2**23) return $1;
+    # bge     $1, $0, floor_L2    # if ($1 < 0) {
+    # fneg    $3, $1              #   $3 = fabs($1);
+    # fadd    $1, $2, $3          #   $1 = $3 + 2**23;
+    # fneg    $2, $2
+    # fadd    $1, $1, $2          #   $1 -= 2**23;
+    # bge     $1, $3, floor_L1    #   if ($1 < $3) {
+    # mov     $2, [floor_C2]
+    # fadd    $1, $1, $2          #     $1 += 1.0;
+# floor_L1:                       #   }
+    # fneg    $1, $1              #   return -$1;
+    # ret
+# floor_L2:                       # } else {
+    # fadd    $3, $1, $2          #   $3 = $1 + 2**23
+    # fneg    $2, $2
+    # fadd    $2, $2, $3          #   $2 = $3 - 2**23
+    # ble     $2, $1, floor_L3    #   if ($2 > $1) {
+    # mov     $3, [floor_C3]
+    # fadd    $1, $2, $3          #     return $2 - 1.0;
+    # ret
+# floor_L3:                       #   }
+    # mov     $1, $2              #   return $2;
+# floor_L4:
+    # ret                         # }
 
 # another implementation of floor
-# floor2_C1:
-    # .float  -1
-# .global floor2
-# floor2:
-    # shl     $2, $1, 1
-    # shr     $2, $2, 24
-    # mov     $3, 150
-    # bge     $2, $3, floor2_ret
-    # mov     $3, 126
-    # ble     $2, $3, floor2_L1
-    # shift   $3, $1, $2 - 150
-    # neg     $2, $2
-    # shift   $3, $3, $2 + 150
-    # br      floor2_L2
-# floor2_L1:
-    # mov     $3, 0
-# floor2_L2:
-    # fneg    $2, $1
-    # fadd    $2, $2, $3
-    # ble     $2, $0, floor2_L3
-    # mov     $2, [floor2_C1]
-    # fadd    $1, $3, $2
-    # ret
-# floor2_L3:
-    # mov     $1, $3
-# floor2_ret:
-    # ret
+floor2_C1:
+    .float  -1
+.global floor
+floor:
+    shl     $2, $1, 1
+    shr     $2, $2, 24
+    mov     $3, 150
+    bge     $2, $3, floor2_ret
+    mov     $3, 126
+    ble     $2, $3, floor2_L1
+    shift   $3, $1, $2 - 150
+    neg     $2, $2
+    shift   $3, $3, $2 + 150
+    br      floor2_L2
+floor2_L1:
+    mov     $3, 0
+floor2_L2:
+    fneg    $2, $1
+    fadd    $2, $2, $3
+    ble     $2, $0, floor2_L3
+    mov     $2, [floor2_C1]
+    fadd    $1, $3, $2
+    ret
+floor2_L3:
+    mov     $1, $3
+floor2_ret:
+    ret
 
 
 # <library> inverse(x)
