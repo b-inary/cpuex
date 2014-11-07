@@ -1,14 +1,15 @@
 
 PROGRAM = urns-front
+OPTION  = -use-menhir
 
 all: $(PROGRAM)
 
-$(PROGRAM):
-	ocamlbuild main.native -use-menhir -no-links
+$(PROGRAM): *.ml *.mll *.mly
+	ocamlbuild main.native -no-links $(OPTION)
 	cp _build/main.native $(PROGRAM)
 
 .PHONY: clean
 clean:
 	rm -f $(PROGRAM)
-	ocamlbuild -clean
- 
+	rm -rf _build
+
