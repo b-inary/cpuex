@@ -24,7 +24,7 @@ type ast =
   | Put     of ast * ast * ast
   | If      of ast * ast * ast
   | Let     of string * ast * ast
-  | LetRec  of string * string list * ast * ast
+  | LetFun  of string * string list * ast * ast
   | LetTpl  of string list * ast * ast
   | App     of ast * ast list
   | Seq     of ast * ast
@@ -71,7 +71,7 @@ let string_of_ast (a : ast) : string =
     | Put (e1, e2, e3) ->       Format.sprintf "(%a.(%a) <- %a)" go e1 go e2 go e3
     | If (e1, e2, e3) ->        Format.sprintf "(If %a Then %a Else %a)" go e1 go e2 go e3
     | Let (v, e1, e2) ->        Format.sprintf "(Let %s = %a In %a)" v go e1 go e2
-    | LetRec (v, l, e1, e2) ->  Format.sprintf "(LetRec %s %a = %a In\n%a)" v join (l, " ") go e1 go e2
+    | LetFun (v, l, e1, e2) ->  Format.sprintf "(LetFun %s %a = %a In\n%a)" v join (l, " ") go e1 go e2
     | LetTpl (l, e1, e2) ->     Format.sprintf "(LetTuple (%a) = %a In %a)" join (l, ", ") go e1 go e2
     | App (e, l) ->             Format.sprintf "(Apply %a %a)" go e go_list (l, " ")
     | Seq (e1, e2) ->           Format.sprintf "(%a; %a)" go e1 go e2

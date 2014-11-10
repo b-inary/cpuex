@@ -11,7 +11,7 @@ open Syntax
 %token PLUS MINUS AST SLASH
 %token PLUSDOT MINUSDOT ASTDOT SLASHDOT FABS
 %token NOT EQUAL NOTEQ LESS LESSEQ GREATER GREATEREQ
-%token IF THEN ELSE LET IN REC COMMA SEMI
+%token IF THEN ELSE LET IN REC COMMA SEMI SEMISEMI
 %token DOT ASSIGN MAKEARRAY
 %token READ WRITE ITOF FTOI FLOOR CASTINT CASTFLT
 %token EOF
@@ -19,6 +19,7 @@ open Syntax
 /* priority (from lower to higher) */
 %nonassoc below_SEMI
 %nonassoc SEMI
+%nonassoc LET
 %nonassoc ELSE
 %nonassoc ASSIGN
 %nonassoc below_COMMA
@@ -35,7 +36,22 @@ open Syntax
 %%
 
 top:
-    seq_expr EOF            { $1 }
+    seq_expr EOF    { $1 }
+  | stmts           { $1 }
+
+stmts:
+    EOF                     { Unit }
+  | SEMISEMI EOF            { Unit }
+  | SEMISEMI seq_expr EOF   { $2 }
+  | SEMISEMI let_stmt       { $2 }
+  | let_stmt                { $1 }
+
+let_stmt:
+    LET IDENT     EQUAL seq_expr stmts          { Let ($2, $4, $5) }
+  | LET LPAR RPAR EQUAL seq_expr stmts          { Let ("Unit", $5, $6) }
+  | LET     IDENT params EQUAL seq_expr stmts   { LetFun ($2, $3, $5, $6) }
+  | LET REC IDENT params EQUAL seq_expr stmts   { LetFun ($3, $4, $6, $7) }
+  | LET pat EQUAL seq_expr stmts                { LetTpl ($2, $4, $5) }
 
 seq_expr:
     expr %prec below_SEMI   { $1 }
@@ -43,8 +59,8 @@ seq_expr:
   | expr SEMI seq_expr      { Seq ($1, $3) }
 
 expr:
-    simple_expr             { $1 }
-  | NOT simple_expr         { Not $2 }
+    simple_expr         { $1 }
+  | NOT simple_expr     { Not $2 }
   | MINUS expr %prec unary_minus
       { match $2 with
           | Int i -> Int (-i)
@@ -71,8 +87,10 @@ expr:
   | MAKEARRAY simple_expr simple_expr               { MakeAry ($2, $3) }
   | simple_expr DOT LPAR seq_expr RPAR ASSIGN expr  { Put ($1, $4, $7) }
   | IF expr THEN expr ELSE expr                     { If ($2, $4, $6) }
-  | LET IDENT EQUAL seq_expr IN seq_expr            { Let ($2, $4, $6) }
-  | LET REC IDENT params EQUAL seq_expr IN seq_expr { LetRec ($3, $4, $6, $8) }
+  | LET IDENT     EQUAL seq_expr IN seq_expr        { Let ($2, $4, $6) }
+  | LET LPAR RPAR EQUAL seq_expr IN seq_expr        { Let ("Unit", $5, $7) }
+  | LET     IDENT params EQUAL seq_expr IN seq_expr { LetFun ($2, $3, $5, $7) }
+  | LET REC IDENT params EQUAL seq_expr IN seq_expr { LetFun ($3, $4, $6, $8) }
   | LET pat EQUAL seq_expr IN seq_expr              { LetTpl ($2, $4, $6) }
   | READ                { Read }
   | WRITE simple_expr   { Write $2 }
@@ -92,22 +110,24 @@ simple_expr:
   | simple_expr DOT LPAR seq_expr RPAR { Get ($1, $4) }
 
 args:
-    args simple_expr  { $1 @ [$2] }
-  | simple_expr       { [$1] }
+    simple_expr         { [$1] }
+  | args simple_expr    { $1 @ [$2] }
 
 params:
-    IDENT params      { $1 :: $2 }
-  | IDENT             { [$1] }
+    IDENT               { [$1] }
+  | LPAR RPAR           { ["Unit"] }
+  | IDENT params        { $1 :: $2 }
+  | LPAR RPAR params    { "Unit" :: $3 }
 
 elems:
-    elems COMMA expr  { $1 @ [$3] }
-  | expr COMMA expr   { [$1; $3] }
+    expr COMMA expr     { [$1; $3] }
+  | elems COMMA expr    { $1 @ [$3] }
 
 pat:
-    vars              { $1 }
-  | LPAR vars RPAR    { $2 }
+    vars                { $1 }
+  | LPAR vars RPAR      { $2 }
 
 vars:
-    vars COMMA IDENT  { $1 @ [$3] }
-  | IDENT COMMA IDENT { [$1; $3] }
+    IDENT COMMA IDENT   { [$1; $3] }
+  | vars COMMA IDENT    { $1 @ [$3] }
 

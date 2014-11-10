@@ -61,6 +61,7 @@ rule token = parse
   | "rec"           { REC }
   | ','             { COMMA }
   | ';'             { SEMI }
+  | ";;"            { SEMISEMI }
   | '.'             { DOT }
   | "<-"            { ASSIGN }
   | "create_array"  { MAKEARRAY }
