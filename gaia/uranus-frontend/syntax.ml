@@ -4,6 +4,7 @@ type ibinop = Add | Sub | Mul | Div
 type funop  = FNeg | FAbs
 type fbinop = FAdd | FSub | FMul | FDiv
 type relop  = EQ | NE | LT | LE | GT | GE
+type special = Read | Write | ItoF | FtoI | Floor | CastInt | CastFloat
 
 (* Abstract Syntax Tree *)
 type ast =
@@ -18,6 +19,7 @@ type ast =
   | FUnOp   of funop * ast
   | FBinOp  of fbinop * ast * ast
   | Cmp     of relop * ast * ast
+  | App     of ast * ast list
   | Tuple   of ast list
   | MakeAry of ast * ast
   | Get     of ast * ast
@@ -26,15 +28,8 @@ type ast =
   | Let     of string * ast * ast
   | LetFun  of string * string list * ast * ast
   | LetTpl  of string list * ast * ast
-  | App     of ast * ast list
   | Seq     of ast * ast
-  | Read
-  | Write   of ast
-  | ItoF    of ast
-  | FtoI    of ast
-  | Floor   of ast
-  | CastInt of ast
-  | CastFlt of ast
+  | Special of special * ast
 
 let string_of_ast (a : ast) : string =
   let rec join fmt = function
@@ -65,6 +60,7 @@ let string_of_ast (a : ast) : string =
     | Cmp (LE, e1, e2) ->       Format.sprintf "(%a <= %a)" go e1 go e2
     | Cmp (GT, e1, e2) ->       Format.sprintf "(%a > %a)" go e1 go e2
     | Cmp (GE, e1, e2) ->       Format.sprintf "(%a >= %a)" go e1 go e2
+    | App (e, l) ->             Format.sprintf "(Apply %a %a)" go e go_list (l, " ")
     | Tuple l ->                Format.sprintf "(%a)" go_list (l, ", ")
     | MakeAry (e1, e2) ->       Format.sprintf "(MakeArray %a %a)" go e1 go e2
     | Get (e1, e2) ->           Format.sprintf "(%a.(%a))" go e1 go e2
@@ -73,15 +69,14 @@ let string_of_ast (a : ast) : string =
     | Let (v, e1, e2) ->        Format.sprintf "(Let %s = %a In %a)" v go e1 go e2
     | LetFun (v, l, e1, e2) ->  Format.sprintf "(LetFun %s %a = %a In\n%a)" v join (l, " ") go e1 go e2
     | LetTpl (l, e1, e2) ->     Format.sprintf "(LetTuple (%a) = %a In %a)" join (l, ", ") go e1 go e2
-    | App (e, l) ->             Format.sprintf "(Apply %a %a)" go e go_list (l, " ")
     | Seq (e1, e2) ->           Format.sprintf "(%a; %a)" go e1 go e2
-    | Read ->                   "#Read"
-    | Write e ->                Format.sprintf "(#Write %a)" go e
-    | ItoF e ->                 Format.sprintf "(#ItoF %a)" go e
-    | FtoI e ->                 Format.sprintf "(#FtoI %a)" go e
-    | Floor e ->                Format.sprintf "(#Floor %a)" go e
-    | CastInt e ->              Format.sprintf "(#CastInt %a)" go e
-    | CastFlt e ->              Format.sprintf "(#CastFloat %a)" go e
+    | Special (Read, e) ->      Format.sprintf "(#read %a)" go e
+    | Special (Write, e) ->     Format.sprintf "(#write %a)" go e
+    | Special (ItoF, e) ->      Format.sprintf "(#itof %a)" go e
+    | Special (FtoI, e) ->      Format.sprintf "(#ftoi %a)" go e
+    | Special (Floor, e) ->     Format.sprintf "(#floor %a)" go e
+    | Special (CastInt, e) ->   Format.sprintf "(#castint %a)" go e
+    | Special (CastFloat, e) -> Format.sprintf "(#castfloat %a)" go e
   and go_list fmt = function
       ([], _) ->                ""
     | ([e], _) ->               Format.sprintf "%a" go e

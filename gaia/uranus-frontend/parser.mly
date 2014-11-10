@@ -36,27 +36,28 @@ open Syntax
 %%
 
 top:
-    seq_expr EOF    { $1 }
-  | stmts           { $1 }
+    seq_expr EOF  { $1 }
+  | stmts         { $1 }
+  | error         { failwith "parse" }
 
 stmts:
-    EOF                     { Unit }
-  | SEMISEMI EOF            { Unit }
-  | SEMISEMI seq_expr EOF   { $2 }
-  | SEMISEMI let_stmt       { $2 }
-  | let_stmt                { $1 }
+    EOF                   { Unit }
+  | SEMISEMI EOF          { Unit }
+  | SEMISEMI seq_expr EOF { $2 }
+  | SEMISEMI let_stmt     { $2 }
+  | let_stmt              { $1 }
 
 let_stmt:
-    LET IDENT     EQUAL seq_expr stmts          { Let ($2, $4, $5) }
-  | LET LPAR RPAR EQUAL seq_expr stmts          { Let ("Unit", $5, $6) }
-  | LET     IDENT params EQUAL seq_expr stmts   { LetFun ($2, $3, $5, $6) }
-  | LET REC IDENT params EQUAL seq_expr stmts   { LetFun ($3, $4, $6, $7) }
-  | LET pat EQUAL seq_expr stmts                { LetTpl ($2, $4, $5) }
+    LET IDENT     EQUAL seq_expr stmts        { Let ($2, $4, $5) }
+  | LET LPAR RPAR EQUAL seq_expr stmts        { Let ("Unit", $5, $6) }
+  | LET     IDENT params EQUAL seq_expr stmts { LetFun ($2, $3, $5, $6) }
+  | LET REC IDENT params EQUAL seq_expr stmts { LetFun ($3, $4, $6, $7) }
+  | LET pat EQUAL seq_expr stmts              { LetTpl ($2, $4, $5) }
 
 seq_expr:
-    expr %prec below_SEMI   { $1 }
-  | expr SEMI               { $1 }
-  | expr SEMI seq_expr      { Seq ($1, $3) }
+    expr %prec below_SEMI { $1 }
+  | expr SEMI             { $1 }
+  | expr SEMI seq_expr    { Seq ($1, $3) }
 
 expr:
     simple_expr         { $1 }
@@ -92,13 +93,13 @@ expr:
   | LET     IDENT params EQUAL seq_expr IN seq_expr { LetFun ($2, $3, $5, $7) }
   | LET REC IDENT params EQUAL seq_expr IN seq_expr { LetFun ($3, $4, $6, $8) }
   | LET pat EQUAL seq_expr IN seq_expr              { LetTpl ($2, $4, $6) }
-  | READ                { Read }
-  | WRITE simple_expr   { Write $2 }
-  | ITOF simple_expr    { ItoF $2 }
-  | FTOI simple_expr    { FtoI $2 }
-  | FLOOR simple_expr   { Floor $2 }
-  | CASTINT simple_expr { CastInt $2 }
-  | CASTFLT simple_expr { CastFlt $2 }
+  | READ simple_expr    { Special (Read, $2) }
+  | WRITE simple_expr   { Special (Write, $2) }
+  | ITOF simple_expr    { Special (ItoF, $2) }
+  | FTOI simple_expr    { Special (FtoI, $2) }
+  | FLOOR simple_expr   { Special (Floor, $2) }
+  | CASTINT simple_expr { Special (CastInt, $2) }
+  | CASTFLT simple_expr { Special (CastFloat, $2) }
 
 simple_expr:
     LPAR seq_expr RPAR { $2 }
@@ -110,24 +111,24 @@ simple_expr:
   | simple_expr DOT LPAR seq_expr RPAR { Get ($1, $4) }
 
 args:
-    simple_expr         { [$1] }
-  | args simple_expr    { $1 @ [$2] }
-
-params:
-    IDENT               { [$1] }
-  | LPAR RPAR           { ["Unit"] }
-  | IDENT params        { $1 :: $2 }
-  | LPAR RPAR params    { "Unit" :: $3 }
+    simple_expr       { [$1] }
+  | args simple_expr  { $1 @ [$2] }
 
 elems:
-    expr COMMA expr     { [$1; $3] }
-  | elems COMMA expr    { $1 @ [$3] }
+    expr COMMA expr   { [$1; $3] }
+  | elems COMMA expr  { $1 @ [$3] }
+
+params:
+    IDENT             { [$1] }
+  | LPAR RPAR         { ["Unit"] }
+  | IDENT params      { $1 :: $2 }
+  | LPAR RPAR params  { "Unit" :: $3 }
 
 pat:
-    vars                { $1 }
-  | LPAR vars RPAR      { $2 }
+    vars              { $1 }
+  | LPAR vars RPAR    { $2 }
 
 vars:
-    IDENT COMMA IDENT   { [$1; $3] }
-  | vars COMMA IDENT    { $1 @ [$3] }
+    IDENT COMMA IDENT { [$1; $3] }
+  | vars COMMA IDENT  { $1 @ [$3] }
 

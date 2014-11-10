@@ -67,20 +67,19 @@ rule token = parse
   | "create_array"  { MAKEARRAY }
   | '_'             { IDENT (new_ident ()) }
   | ident as lxm    { IDENT lxm }
-  | "#Read"         { READ }
-  | "#Write"        { WRITE }
-  | "#ItoF"         { ITOF }
-  | "#FtoI"         { FTOI }
-  | "#Floor"        { FLOOR }
-  | "#CastInt"      { CASTINT }
-  | "#CastFloat"    { CASTFLT }
-  | "#File " ([^'/']+ as fname) '/'
-                    { init lexbuf fname; token lexbuf }
+  | "#read"         { READ }
+  | "#write"        { WRITE }
+  | "#itof"         { ITOF }
+  | "#ftoi"         { FTOI }
+  | "#floor"        { FLOOR }
+  | "#castint"      { CASTINT }
+  | "#castfloat"    { CASTFLT }
+  | "#file " ([^'/']+ as fname) '/' { init lexbuf fname; token lexbuf }
   | eof             { EOF }
   | _               { failwith ("illegal token '" ^ lexeme lexbuf ^ "'") }
 
 and comment = parse
-  | "(*"    { comment lexbuf; comment lexbuf }
+    "(*"    { comment lexbuf; comment lexbuf }
   | "*)"    {}
   | '\n'    { new_line lexbuf; comment lexbuf }
   | eof     { failwith "unterminated comment" }
