@@ -1,0 +1,7 @@
+convbin
+*.s
+*.out
+!bootloader.s
+!globals.s
+!libmincaml.s
+!sample.s
