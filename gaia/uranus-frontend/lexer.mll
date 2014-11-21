@@ -2,10 +2,10 @@
 open Parser
 open Lexing
 
-let counter = ref (-1)
-let new_ident () = incr counter; "Tmp" ^ string_of_int !counter
+let counter : int ref = ref (-1)
+let new_ident () : string = incr counter; "Tmp" ^ string_of_int !counter
 
-let init lexbuf fname =
+let init (lexbuf : Lexing.lexbuf) (fname : string) : unit =
     lexbuf.lex_curr_p <- {
         pos_fname = fname;
         pos_lnum = 1;

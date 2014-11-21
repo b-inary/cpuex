@@ -16,7 +16,7 @@ let () =
   let argc = Array.length Sys.argv in
   if argc = 1 then
     let ast = parse (Lexing.from_channel stdin) in
-    print_endline (Syntax.string_of_ast ast)
+    SsaConv.ssa_conv ast
   else
     let rec go n =
       if n = argc then "" else
@@ -30,4 +30,4 @@ let () =
       let content = really_input_string ic (in_channel_length ic) in
       "#file " ^ fname ^ "/" ^ content ^ go (n + 1) in
     let ast = parse (Lexing.from_string (go 1)) in
-    print_endline (Syntax.string_of_ast ast)
+    SsaConv.ssa_conv ast

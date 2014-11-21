@@ -1,5 +1,5 @@
 %{
-open Syntax
+open Ast
 %}
 
 /* tokens */
@@ -30,7 +30,7 @@ open Syntax
 %nonassoc unary_minus
 
 /* start symbol */
-%type <Syntax.ast> top
+%type <Ast.ast> top
 %start top
 
 %%
@@ -49,7 +49,7 @@ stmts:
 
 let_stmt:
     LET IDENT     EQUAL seq_expr stmts        { Let ($2, $4, $5) }
-  | LET LPAR RPAR EQUAL seq_expr stmts        { Let ("Unit", $5, $6) }
+  | LET LPAR RPAR EQUAL seq_expr stmts        { Seq ($5, $6) }
   | LET     IDENT params EQUAL seq_expr stmts { LetFun ($2, $3, $5, $6) }
   | LET REC IDENT params EQUAL seq_expr stmts { LetFun ($3, $4, $6, $7) }
   | LET pat EQUAL seq_expr stmts              { LetTpl ($2, $4, $5) }
@@ -66,17 +66,17 @@ expr:
       { match $2 with
           | Int i -> Int (-i)
           | Float f -> Float (-.f)
-          | _ -> IUnOp (Neg, $2) }
-  | expr PLUS expr      { IBinOp (Add, $1, $3) }
-  | expr MINUS expr     { IBinOp (Sub, $1, $3) }
-  | expr AST expr       { IBinOp (Mul, $1, $3) }
-  | expr SLASH expr     { IBinOp (Div, $1, $3) }
-  | MINUSDOT expr %prec unary_minus { FUnOp (FNeg, $2) }
-  | FABS simple_expr    { FUnOp (FAbs, $2) }
-  | expr PLUSDOT expr   { FBinOp (FAdd, $1, $3) }
-  | expr MINUSDOT expr  { FBinOp (FSub, $1, $3) }
-  | expr ASTDOT expr    { FBinOp (FMul, $1, $3) }
-  | expr SLASHDOT expr  { FBinOp (FDiv, $1, $3) }
+          | _ -> Iop (Sub, Int 0, $2) }
+  | expr PLUS expr      { Iop (Add, $1, $3) }
+  | expr MINUS expr     { Iop (Sub, $1, $3) }
+  | expr AST expr       { Iop (Mul, $1, $3) }
+  | expr SLASH expr     { Iop (Div, $1, $3) }
+  | MINUSDOT expr %prec unary_minus { Fop (Fsub, Float 0., $2) }
+  | expr PLUSDOT expr   { Fop (Fadd, $1, $3) }
+  | expr MINUSDOT expr  { Fop (Fsub, $1, $3) }
+  | expr ASTDOT expr    { Fop (Fmul, $1, $3) }
+  | expr SLASHDOT expr  { Fop (Fdiv, $1, $3) }
+  | FABS simple_expr    { Fabs ($2) }
   | expr EQUAL expr     { Cmp (EQ, $1, $3) }
   | expr NOTEQ expr     { Cmp (NE, $1, $3) }
   | expr LESS expr      { Cmp (LT, $1, $3) }
@@ -89,7 +89,7 @@ expr:
   | simple_expr DOT LPAR seq_expr RPAR ASSIGN expr  { Put ($1, $4, $7) }
   | IF expr THEN expr ELSE expr                     { If ($2, $4, $6) }
   | LET IDENT     EQUAL seq_expr IN seq_expr        { Let ($2, $4, $6) }
-  | LET LPAR RPAR EQUAL seq_expr IN seq_expr        { Let ("Unit", $5, $7) }
+  | LET LPAR RPAR EQUAL seq_expr IN seq_expr        { Seq ($5, $7) }
   | LET     IDENT params EQUAL seq_expr IN seq_expr { LetFun ($2, $3, $5, $7) }
   | LET REC IDENT params EQUAL seq_expr IN seq_expr { LetFun ($3, $4, $6, $8) }
   | LET pat EQUAL seq_expr IN seq_expr              { LetTpl ($2, $4, $6) }
