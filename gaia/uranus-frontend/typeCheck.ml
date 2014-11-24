@@ -4,13 +4,12 @@ open Type
 open Ast
 open Printf
 
-module M = Map.Make (String)
 let global_table = ref M.empty
 let add_global =
   let id = ref (-1) in
   fun name ->
     incr id;
-    let ret = sprintf "%s.%d" name !id in
+    let ret = sprintf "@%s.%d" name !id in
     global_table := M.add name ret !global_table;
     ret
 
@@ -112,7 +111,7 @@ let rec infer env expr =
     | LetTpl (names, e1, e2) ->
         let ts = List.map (fun _ -> new_tyvar ()) names in
         unify (TTuple ts) (infer env e1);
-        infer (List.fold_left2 (fun e n t -> M.add n t e) env names ts) e2
+        infer (M.add_list names ts env) e2
     | Seq (e1, e2) -> unify TUnit (infer env e1); infer env e2
     | _ -> invalid_argf "infer: %s" (ast_to_string expr)
   with Unify (expect, actual) -> unify_error expr expect actual
@@ -128,13 +127,18 @@ let rec infer_global env expr =
         let name' = add_global name in
         let env' = M.add name' ty env in
         let argsty = List.map (fun a -> if a = "Unit" then TUnit else new_tyvar ()) args in
-        let retty = infer (List.fold_left2 (fun e a t -> M.add a t e) env' args argsty) e1 in
+        let retty = infer (M.add_list args argsty env') e1 in
         unify (TFun (retty, argsty)) ty;
         infer_global env' e2
+    | LetTpl (names, e1, e2) ->
+        let ts = List.map (fun _ -> new_tyvar ()) names in
+        unify (TTuple ts) (infer env e1);
+        let names' = List.map add_global names in
+        infer_global (M.add_list names' ts env) e2
     | Seq (e1, e2) ->
         unify TUnit (infer env e1);
         infer_global env e2
-    | e -> (infer env e, env)
+    | e -> ignore (infer env e); env
   with Unify (expect, actual) -> unify_error expr expect actual
 
 
@@ -142,12 +146,10 @@ let rec deref_tyvar = function
     TTuple ts -> TTuple (List.map deref_tyvar ts)
   | TArray t -> TArray (deref_tyvar t)
   | TFun (t, ts) -> TFun (deref_tyvar t, List.map deref_tyvar ts)
-  | TVar ({contents = None} as r) -> r := Some TUnit; TUnit (* monomorphic *)
-  | TVar ({contents = Some t} as r) ->
-      let t' = deref_tyvar t in r := Some t'; t'
+  | TVar {contents = None} -> TUnit (* monomorphic *)
+  | TVar {contents = Some t} -> deref_tyvar t
   | t -> t
 
 let type_check expr =
-  let (ty, global_env) = infer_global M.empty expr in
-  (ty, M.map deref_tyvar global_env)
+  M.map deref_tyvar (infer_global M.empty expr)
 

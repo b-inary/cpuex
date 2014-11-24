@@ -1,7 +1,7 @@
 
 (* floating point functions *)
-let fequal x y = x = y
-let fless x y = x < y
+let fequal x y = let _ = x +. 0. in x = y (* help type inference *)
+let fless x y = let _ = x +. 0. in x < y
 let fispos x = x > 0.
 let fisneg x = x < 0.
 let fiszero x = x = 0.
@@ -14,4 +14,3 @@ let fneg x = -.x
 (* math functions *)
 
 ;;
-
