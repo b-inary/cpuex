@@ -1,4 +1,6 @@
 
+open Mylib
+
 let parse buf =
   let error msg =
     let pos = buf.Lexing.lex_start_p in
@@ -13,21 +15,15 @@ let parse buf =
     | Failure msg -> error msg
 
 let () =
-  let argc = Array.length Sys.argv in
-  if argc = 1 then
-    let ast = parse (Lexing.from_channel stdin) in
-    SsaConv.ssa_conv ast
-  else
-    let rec go n =
-      if n = argc then "" else
-      let s = Sys.argv.(n) in
-      let fname =
-        try
-          let i = String.rindex s '/' in
-          String.sub s (i + 1) (String.length s - i - 1)
-        with Not_found -> s in
-      let ic = open_in Sys.argv.(n) in
-      let content = really_input_string ic (in_channel_length ic) in
-      "#file " ^ fname ^ "/" ^ content ^ go (n + 1) in
-    let ast = parse (Lexing.from_string (go 1)) in
-    SsaConv.ssa_conv ast
+  let argv = Sys.argv |> Array.to_list |> List.tl in
+  let inputs = if argv = [] then ["<stdin>"] else argv in
+  let read fname =
+    let ic = if fname = "<stdin>" then stdin else open_in fname in
+    let pos = try String.rindex fname '/' with Not_found -> -1 in
+    let fname = String.sub fname (pos + 1) (String.length fname - pos - 1) in
+    Printf.sprintf "#file %s/\n%s" fname (input_all ic) in
+  let content = String.concat "" (List.map read inputs) in
+  let ast = parse (Lexing.from_string content) in
+  let (ty, env) = TypeCheck.type_check ast in
+  Emit.emit ty env ast
+

@@ -1,17 +1,21 @@
 {
+open Mylib
 open Parser
 open Lexing
 
-let counter : int ref = ref (-1)
-let new_ident () : string = incr counter; "Tmp" ^ string_of_int !counter
+let new_ident =
+  let counter = ref (-1) in
+  fun () ->
+    incr counter;
+    "Tmp" ^ string_of_int !counter
 
-let init (lexbuf : Lexing.lexbuf) (fname : string) : unit =
-    lexbuf.lex_curr_p <- {
-        pos_fname = fname;
-        pos_lnum = 1;
-        pos_bol = 0;
-        pos_cnum = 0;
-    }
+let init lexbuf fname =
+  lexbuf.lex_curr_p <- {
+    pos_fname = fname;
+    pos_lnum = 0;
+    pos_bol = 0;
+    pos_cnum = 0;
+  }
 }
 
 
@@ -76,7 +80,7 @@ rule token = parse
   | "#castfloat"    { CASTFLT }
   | "#file " ([^'/']+ as fname) '/' { init lexbuf fname; token lexbuf }
   | eof             { EOF }
-  | _               { failwith ("illegal token '" ^ lexeme lexbuf ^ "'") }
+  | _               { failwithf "illegal token '%s'" (lexeme lexbuf) }
 
 and comment = parse
     "(*"    { comment lexbuf; comment lexbuf }

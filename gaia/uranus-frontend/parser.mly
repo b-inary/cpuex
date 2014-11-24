@@ -41,8 +41,8 @@ top:
   | error         { failwith "parse" }
 
 stmts:
-    EOF                   { Unit }
-  | SEMISEMI EOF          { Unit }
+    EOF                   { Atom Unit }
+  | SEMISEMI EOF          { Atom Unit }
   | SEMISEMI seq_expr EOF { $2 }
   | SEMISEMI let_stmt     { $2 }
   | let_stmt              { $1 }
@@ -64,19 +64,19 @@ expr:
   | NOT simple_expr     { Not $2 }
   | MINUS expr %prec unary_minus
       { match $2 with
-          | Int i -> Int (-i)
-          | Float f -> Float (-.f)
-          | _ -> Iop (Sub, Int 0, $2) }
-  | expr PLUS expr      { Iop (Add, $1, $3) }
-  | expr MINUS expr     { Iop (Sub, $1, $3) }
-  | expr AST expr       { Iop (Mul, $1, $3) }
-  | expr SLASH expr     { Iop (Div, $1, $3) }
-  | MINUSDOT expr %prec unary_minus { Fop (Fsub, Float 0., $2) }
-  | expr PLUSDOT expr   { Fop (Fadd, $1, $3) }
-  | expr MINUSDOT expr  { Fop (Fsub, $1, $3) }
-  | expr ASTDOT expr    { Fop (Fmul, $1, $3) }
-  | expr SLASHDOT expr  { Fop (Fdiv, $1, $3) }
-  | FABS simple_expr    { Fabs ($2) }
+          | Atom (Int i) -> Atom (Int (-i))
+          | Atom (Float f) -> Atom (Float (-.f))
+          | _ -> IOp (Sub, Atom (Int 0), $2) }
+  | expr PLUS expr      { IOp (Add, $1, $3) }
+  | expr MINUS expr     { IOp (Sub, $1, $3) }
+  | expr AST expr       { IOp (Mul, $1, $3) }
+  | expr SLASH expr     { IOp (Div, $1, $3) }
+  | MINUSDOT expr %prec unary_minus { FOp (FSub, Atom (Float 0.), $2) }
+  | expr PLUSDOT expr   { FOp (FAdd, $1, $3) }
+  | expr MINUSDOT expr  { FOp (FSub, $1, $3) }
+  | expr ASTDOT expr    { FOp (FMul, $1, $3) }
+  | expr SLASHDOT expr  { FOp (FDiv, $1, $3) }
+  | FABS simple_expr    { FAbs ($2) }
   | expr EQUAL expr     { Cmp (EQ, $1, $3) }
   | expr NOTEQ expr     { Cmp (NE, $1, $3) }
   | expr LESS expr      { Cmp (LT, $1, $3) }
@@ -93,21 +93,21 @@ expr:
   | LET     IDENT params EQUAL seq_expr IN seq_expr { LetFun ($2, $3, $5, $7) }
   | LET REC IDENT params EQUAL seq_expr IN seq_expr { LetFun ($3, $4, $6, $8) }
   | LET pat EQUAL seq_expr IN seq_expr              { LetTpl ($2, $4, $6) }
-  | READ simple_expr    { Special (Read, $2) }
-  | WRITE simple_expr   { Special (Write, $2) }
-  | ITOF simple_expr    { Special (ItoF, $2) }
-  | FTOI simple_expr    { Special (FtoI, $2) }
-  | FLOOR simple_expr   { Special (Floor, $2) }
-  | CASTINT simple_expr { Special (CastInt, $2) }
-  | CASTFLT simple_expr { Special (CastFloat, $2) }
+  | READ simple_expr    { Dir (Read, $2) }
+  | WRITE simple_expr   { Dir (Write, $2) }
+  | ITOF simple_expr    { Dir (ItoF, $2) }
+  | FTOI simple_expr    { Dir (FtoI, $2) }
+  | FLOOR simple_expr   { Dir (Floor, $2) }
+  | CASTINT simple_expr { Dir (CastInt, $2) }
+  | CASTFLT simple_expr { Dir (CastFloat, $2) }
 
 simple_expr:
     LPAR seq_expr RPAR { $2 }
-  | LPAR RPAR { Unit }
-  | BOOL      { Bool $1 }
-  | INT       { Int $1 }
-  | FLOAT     { Float $1 }
-  | IDENT     { Var $1 }
+  | LPAR RPAR { Atom Unit }
+  | BOOL      { Atom (Bool $1) }
+  | INT       { Atom (Int $1) }
+  | FLOAT     { Atom (Float $1) }
+  | IDENT     { Atom (Var $1) }
   | simple_expr DOT LPAR seq_expr RPAR { Get ($1, $4) }
 
 args:
