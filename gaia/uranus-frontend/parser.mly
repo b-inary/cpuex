@@ -9,7 +9,7 @@ open Ast
 %token <string> IDENT
 %token LPAR RPAR
 %token PLUS MINUS AST SLASH SHL SHR
-%token PLUSDOT MINUSDOT ASTDOT SLASHDOT FABS
+%token PLUSDOT MINUSDOT ASTDOT SLASHDOT FABS SQRT
 %token NOT EQUAL NOTEQ LESS LESSEQ GREATER GREATEREQ
 %token IF THEN ELSE LET IN REC COMMA SEMI SEMISEMI
 %token DOT ASSIGN MAKEARRAY
@@ -80,6 +80,7 @@ expr:
   | expr ASTDOT expr    { FOp (FMul, $1, $3) }
   | expr SLASHDOT expr  { FOp (FDiv, $1, $3) }
   | FABS simple_expr    { FAbs ($2) }
+  | SQRT simple_expr    { FSqrt ($2) }
   | expr EQUAL expr     { Cmp (EQ, $1, $3) }
   | expr NOTEQ expr     { Cmp (NE, $1, $3) }
   | expr LESS expr      { Cmp (LT, $1, $3) }

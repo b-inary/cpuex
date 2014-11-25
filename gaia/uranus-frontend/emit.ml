@@ -15,8 +15,8 @@ let new_ident () =
   incr id_counter;
   "%" ^ string_of_int !id_counter
 
-let current_label = ref "$0"
-let label_table = ref (M.singleton "$0" "%0")
+let current_label = ref "%0"
+let label_table = ref M.empty
 let new_label =
   let cnt = ref 0 in
   fun () ->
@@ -127,29 +127,34 @@ and create_array env expr1 expr2 =
   let atom1 = fst (insert_let env expr1) in
   let (atom2, t) = insert_let env expr2 in
   let ty = TArray t in
-  let sz = fst (insert_let env (IOp (Mul, Atom atom1, Atom (Int 8)))) in
+  let sz = match atom1 with
+      Int i -> Int (i * 8)
+    | Var v ->
+        let ret = new_ident () in
+        add_line "%s = mul i32 %s, 8" ret v;
+        Var ret
+    | _ -> failwith "create_array: something wrong" in
   let tmp = new_ident () in
   let ret = new_ident () in
   let tmp2 = new_ident () in
-  let l1, l2, l3 = new_label (), new_label (), new_label () in
+  let l0 = !current_label in
+  let l1, l2 = new_label (), new_label () in
   add_line "%s = call noalias i8* @malloc(i32 %s)" tmp (atos sz);
   add_line "%s = bitcast i8* %s to %s" ret tmp (ttos ty);
   add_line "%s = icmp sgt i32 %s, 0" tmp2 (atos atom1);
-  add_line "br i1 %s, label %s, label %s" tmp2 l1 l3;
+  add_line "br i1 %s, label %s, label %s" tmp2 l1 l2;
   add_label l1;
-  add_line "br label %s" l2;
-  add_label l2;
   let tmp3 = new_ident () in
   let tmp4 = new_ident () in
   let tmp5 = new_ident () in
   let tmp6 = new_ident () in
-  add_line "%s = phi i32 [0, %s], [%s, %s]" tmp3 l1 tmp5 l2;
+  add_line "%s = phi i32 [0, %s], [%s, %s]" tmp3 l0 tmp5 l1;
   add_line "%s = getelementptr %s %s, i32 %s" tmp4 (ttos ty) ret tmp3;
   add_line "store %s %s, %s %s" (ttos t) (atos atom2) (ttos ty) tmp4;
   add_line "%s = add i32 %s, 1" tmp5 tmp3;
   add_line "%s = icmp slt i32 %s, %s" tmp6 tmp5 (atos atom1);
-  add_line "br i1 %s, label %s, label %s" tmp6 l2 l3;
-  add_label l3;
+  add_line "br i1 %s, label %s, label %s" tmp6 l1 l2;
+  add_label l2;
   (Var ret, ty)
 
 and get env expr1 expr2 =
@@ -249,7 +254,7 @@ and insert_let env expr =
     | Atom (Int i) -> (Int i, TInt)
     | Atom (Float f) -> (Float f, TFloat)
     | Atom (Var v) -> var env v
-    | Not e -> unop env TInt e "xor i1 %s, 1"
+    | Not e -> unop env TBool e "xor i1 %s, 1"
     | IOp (Add, e1, e2) -> binop env TInt e1 e2 "add i32 %s, %s"
     | IOp (Sub, e1, e2) -> binop env TInt e1 e2 "sub i32 %s, %s"
     | IOp (Mul, e1, e2) -> binop env TInt e1 e2 "mul i32 %s, %s"
@@ -287,7 +292,7 @@ let main_buf = ref []
 let main_id = ref 0
 let global_buf = ref []
 let global_id = ref (-1)
-let reset () = output_buf := []; id_counter := 0; current_label := "$0"
+let reset () = output_buf := []; id_counter := 0; current_label := "%0"
 let push_main () = main_buf := !output_buf; main_id := !id_counter
 let pop_main () = output_buf := !main_buf; id_counter := !main_id
 

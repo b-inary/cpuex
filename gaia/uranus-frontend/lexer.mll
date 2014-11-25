@@ -53,6 +53,7 @@ rule token = parse
   | "*."            { ASTDOT }
   | "/."            { SLASHDOT }
   | "fabs"          { FABS }
+  | "sqrt"          { SQRT }
   | '='             { EQUAL }
   | "<>"            { NOTEQ }
   | '<'             { LESS }

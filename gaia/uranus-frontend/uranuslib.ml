@@ -35,5 +35,8 @@ let float_of_int i = #itof i
 let int_of_float f = #ftoi f
 let floor f = #floor f
 (* TODO: sin, cos, atan *)
+let sin x = x
+let cos x = x
+let atan x = x
 
 ;;
