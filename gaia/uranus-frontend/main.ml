@@ -17,7 +17,7 @@ let parse buf =
 
 let () =
   let argv = Sys.argv |> Array.to_list |> List.tl in
-  let inputs = if argv = [] then ["<stdin>"] else argv in
+  let inputs = "uranuslib.ml" :: (if argv = [] then ["<stdin>"] else argv) in
   let read fname =
     let ic = if fname = "<stdin>" then stdin else open_in fname in
     let pos = try String.rindex fname '/' with Not_found -> -1 in

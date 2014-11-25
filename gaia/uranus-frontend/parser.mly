@@ -8,7 +8,7 @@ open Ast
 %token <float>  FLOAT
 %token <string> IDENT
 %token LPAR RPAR
-%token PLUS MINUS AST SLASH
+%token PLUS MINUS AST SLASH SHL SHR
 %token PLUSDOT MINUSDOT ASTDOT SLASHDOT FABS
 %token NOT EQUAL NOTEQ LESS LESSEQ GREATER GREATEREQ
 %token IF THEN ELSE LET IN REC COMMA SEMI SEMISEMI
@@ -27,6 +27,7 @@ open Ast
 %left     EQUAL NOTEQ LESS LESSEQ GREATER GREATEREQ
 %left     PLUS MINUS PLUSDOT MINUSDOT
 %left     AST SLASH ASTDOT SLASHDOT
+%right    SHL SHR
 %nonassoc unary_minus
 
 /* start symbol */
@@ -71,6 +72,8 @@ expr:
   | expr MINUS expr     { IOp (Sub, $1, $3) }
   | expr AST expr       { IOp (Mul, $1, $3) }
   | expr SLASH expr     { IOp (Div, $1, $3) }
+  | expr SHL expr       { IOp (Shl, $1, $3) }
+  | expr SHR expr       { IOp (Shr, $1, $3) }
   | MINUSDOT expr %prec unary_minus { FOp (FSub, Atom (Float 0.), $2) }
   | expr PLUSDOT expr   { FOp (FAdd, $1, $3) }
   | expr MINUSDOT expr  { FOp (FSub, $1, $3) }

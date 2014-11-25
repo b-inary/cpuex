@@ -1,7 +1,7 @@
 
 open Printf
 
-type iop = Add | Sub | Mul | Div
+type iop = Add | Sub | Mul | Div | Shl | Shr
 type fop = FAdd | FSub | FMul | FDiv
 type relop  = EQ | NE | LT | LE | GT | GE
 type dir = Read | Write | ItoF | FtoI | Floor | CastInt | CastFloat
@@ -15,6 +15,7 @@ type ast =
   | IOp     of iop * ast * ast
   | FOp     of fop * ast * ast
   | FAbs    of ast
+  | FSqrt   of ast
   | Cmp     of relop * ast * ast
   | App     of ast * ast list
   | Tuple   of ast list
@@ -44,11 +45,14 @@ let ast_to_string a =
     | IOp (Sub, e1, e2) ->      sprintf "(%a - %a)" go e1 go e2
     | IOp (Mul, e1, e2) ->      sprintf "(%a * %a)" go e1 go e2
     | IOp (Div, e1, e2) ->      sprintf "(%a / %a)" go e1 go e2
+    | IOp (Shl, e1, e2) ->      sprintf "(%a << %a)" go e1 go e2
+    | IOp (Shr, e1, e2) ->      sprintf "(%a >> %a)" go e1 go e2
     | FOp (FAdd, e1, e2) ->     sprintf "(%a +. %a)" go e1 go e2
     | FOp (FSub, e1, e2) ->     sprintf "(%a -. %a)" go e1 go e2
     | FOp (FMul, e1, e2) ->     sprintf "(%a *. %a)" go e1 go e2
     | FOp (FDiv, e1, e2) ->     sprintf "(%a /. %a)" go e1 go e2
     | FAbs e ->                 sprintf "(fabs %a)" go e
+    | FSqrt e ->                sprintf "(sqrt %a)" go e
     | Cmp (EQ, e1, e2) ->       sprintf "(%a = %a)" go e1 go e2
     | Cmp (NE, e1, e2) ->       sprintf "(%a <> %a)" go e1 go e2
     | Cmp (LT, e1, e2) ->       sprintf "(%a < %a)" go e1 go e2

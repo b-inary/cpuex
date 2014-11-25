@@ -15,7 +15,8 @@ let new_ident () =
   incr id_counter;
   "%" ^ string_of_int !id_counter
 
-let label_table = ref M.empty
+let current_label = ref "$0"
+let label_table = ref (M.singleton "$0" "%0")
 let new_label =
   let cnt = ref 0 in
   fun () ->
@@ -24,6 +25,7 @@ let new_label =
 let add_label l =
   let id = new_ident () in
   label_table := M.add l id !label_table;
+  current_label := l;
   add_line_noindent "";
   add_line_noindent "; <label>:%s" (String.sub id 1 (String.length id - 1))
 
@@ -177,14 +179,18 @@ and branch env expr1 expr2 expr3 =
   add_line "br i1 %s, label %s, label %s" (atos atom1) l1 l2;
   add_label l1;
   let (atom2, ty) = insert_let env expr2 in
+  let l1' = !current_label in
   add_line "br label %s" l3;
   add_label l2;
   let atom3 = fst (insert_let env expr3) in
+  let l2' = !current_label in
   add_line "br label %s" l3;
   add_label l3;
-  let ret = new_ident () in
-  add_line "%s = phi %s [%s, %s], [%s, %s]" ret (ttos ty) (atos atom2) l1 (atos atom3) l2;
-  (Var ret, ty)
+  if ty = TUnit then (Unit, TUnit) else begin
+    let ret = new_ident () in
+    add_line "%s = phi %s [%s, %s], [%s, %s]" ret (ttos ty) (atos atom2) l1' (atos atom3) l2';
+    (Var ret, ty)
+  end
 
 and bind env name expr1 expr2 =
   let (atom, ty) = insert_let env expr1 in
@@ -207,6 +213,35 @@ and let_tuple atom ty tys =
     (Var ret, t) in
   List.mapi load tys
 
+and dir atom = function
+    Read ->
+      let ret = new_ident () in
+      add_line "%s = call i32 @read()" ret;
+      (Var ret, TInt)
+  | Write ->
+      add_line "call void @write(i32 %s)" (atos atom);
+      (Unit, TUnit)
+  | ItoF ->
+      let ret = new_ident () in
+      add_line "%s = sitofp i32 %s to float" ret (atos atom);
+      (Var ret, TFloat)
+  | FtoI ->
+      let ret = new_ident () in
+      add_line "%s = fptosi float %s to i32" ret (atos atom);
+      (Var ret, TInt)
+  | Floor ->
+      let ret = new_ident () in
+      add_line "%s = call float @llvm.floor.f32(float %s)" ret (atos atom);
+      (Var ret, TFloat)
+  | CastInt ->
+      let ret = new_ident () in
+      add_line "%s = bitcast float %s to i32" ret (atos atom);
+      (Var ret, TInt)
+  | CastFloat ->
+      let ret = new_ident () in
+      add_line "%s = bitcast i32 %s to float" ret (atos atom);
+      (Var ret, TFloat)
+
 and insert_let env expr =
   try match expr with
       Atom Unit -> (Unit, TUnit)
@@ -219,11 +254,14 @@ and insert_let env expr =
     | IOp (Sub, e1, e2) -> binop env TInt e1 e2 "sub i32 %s, %s"
     | IOp (Mul, e1, e2) -> binop env TInt e1 e2 "mul i32 %s, %s"
     | IOp (Div, e1, e2) -> binop env TInt e1 e2 "udiv i32 %s, %s"
+    | IOp (Shl, e1, e2) -> binop env TInt e1 e2 "shl i32 %s, %s"
+    | IOp (Shr, e1, e2) -> binop env TInt e1 e2 "lshr i32 %s, %s"
     | FOp (FAdd, e1, e2) -> binop env TFloat e1 e2 "fadd fast float %s, %s"
     | FOp (FSub, e1, e2) -> binop env TFloat e1 e2 "fsub fast float %s, %s"
     | FOp (FMul, e1, e2) -> binop env TFloat e1 e2 "fmul fast float %s, %s"
     | FOp (FDiv, e1, e2) -> binop env TFloat e1 e2 "fdiv fast float %s, %s"
     | FAbs e -> unop env TFloat e "call float @llvm.fabs.f32(float %s)"
+    | FSqrt e -> unop env TFloat e "call float @llvm.sqrt.f32(float %s)"
     | Cmp (EQ, e1, e2) -> cmp env e1 e2 "eq" "oeq"
     | Cmp (NE, e1, e2) -> cmp env e1 e2 "ne" "one"
     | Cmp (LT, e1, e2) -> cmp env e1 e2 "slt" "olt"
@@ -231,15 +269,17 @@ and insert_let env expr =
     | Cmp (GT, e1, e2) -> cmp env e1 e2 "sgt" "ogt"
     | Cmp (GE, e1, e2) -> cmp env e1 e2 "sge" "oge"
     | App (Atom (Var func), args) -> app env func args
+    | App _ -> failwith "insert_let: something wrong"
     | Tuple l -> tuple env l
     | MakeAry (e1, e2) -> create_array env e1 e2
     | Get (e1, e2) -> get env e1 e2
     | Put (e1, e2, e3) -> put env e1 e2 e3
     | If (e1, e2, e3) -> branch env e1 e2 e3
     | Let (v, e1, e2) -> bind env v e1 e2
+    | LetFun _ -> failwith "insert_let: something wrong"
     | LetTpl (l, e1, e2) -> bind_tuple env l e1 e2
     | Seq (e1, e2) -> ignore (insert_let env e1); insert_let env e2
-    | ast -> invalid_argf "insert_let: %s" (ast_to_string ast)
+    | Dir (d, e) -> dir (fst (insert_let env e)) d
   with Failure msg -> TypeCheck.error expr msg
 
 
@@ -247,19 +287,21 @@ let main_buf = ref []
 let main_id = ref 0
 let global_buf = ref []
 let global_id = ref (-1)
-let reset () = output_buf := []; id_counter := 0
+let reset () = output_buf := []; id_counter := 0; current_label := "$0"
 let push_main () = main_buf := !output_buf; main_id := !id_counter
 let pop_main () = output_buf := !main_buf; id_counter := !main_id
 
 let add_global name ty =
   incr global_id;
   let name' = sprintf "@%s.%d" name !global_id in
-  let s = match ty with
-      TBool -> "i1 false"
-    | TInt -> "i32 0"
-    | TFloat -> "float 0."
-    | _ -> sprintf "%s null" (ttos ty) in
-  global_buf := sprintf "%s = private global %s" name' s :: !global_buf;
+  if ty <> TUnit then begin
+    let s = match ty with
+        TBool -> "i1 false"
+      | TInt -> "i32 0"
+      | TFloat -> "float 0."
+      | _ -> sprintf "%s null" (ttos ty) in
+    global_buf := sprintf "%s = private global %s" name' s :: !global_buf
+  end;
   name'
 
 let add_func name =
@@ -284,7 +326,8 @@ let emit global_env ast =
       Let (name, e1, e2) ->
         let (atom, ty) = insert_let env e1 in
         let name' = add_global name ty in
-        add_line "store %s %s, %s* %s" (ttos ty) (atos atom) (ttos ty) name';
+        if ty <> TUnit then
+          add_line "store %s %s, %s* %s" (ttos ty) (atos atom) (ttos ty) name';
         go (M.add name (Var name', ty) env) e2
     | LetFun (name, args, e1, e2) ->
         push_main ();
@@ -331,9 +374,10 @@ let emit global_env ast =
   emit_buf !global_buf;
   print_endline "";
   print_endline "declare i32 @read() nounwind";
-  print_endline "declare void @write(i32) nounwind readnone";
+  print_endline "declare void @write(i32) nounwind";
   print_endline "declare float @llvm.fabs.f32(float)";
-  print_endline "declare float @llvm.float.f32(float)";
+  print_endline "declare float @llvm.sqrt.f32(float)";
+  print_endline "declare float @llvm.floor.f32(float)";
   print_endline "declare noalias i8* @malloc(i32) nounwind";
   print_endline ""
 

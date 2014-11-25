@@ -76,7 +76,7 @@ let rec infer env expr =
         unify TFloat (infer env e1);
         unify TFloat (infer env e2);
         TFloat
-    | FAbs e -> unify TFloat (infer env e); TFloat
+    | FAbs e | FSqrt e -> unify TFloat (infer env e); TFloat
     | Cmp (_, e1, e2) -> unify (infer env e1) (infer env e2); TBool
     | App (Atom (Var func), args) ->
         let retty = new_tyvar () in
@@ -113,7 +113,13 @@ let rec infer env expr =
         unify (TTuple ts) (infer env e1);
         infer (M.add_list names ts env) e2
     | Seq (e1, e2) -> unify TUnit (infer env e1); infer env e2
-    | _ -> invalid_argf "infer: %s" (ast_to_string expr)
+    | Dir (Read, e) -> unify TUnit (infer env e); TInt
+    | Dir (Write, e) -> unify TInt (infer env e); TUnit
+    | Dir (ItoF, e) -> unify TInt (infer env e); TFloat
+    | Dir (FtoI, e) -> unify TFloat (infer env e); TInt
+    | Dir (Floor, e) -> unify TFloat (infer env e); TFloat
+    | Dir (CastInt, e) -> unify TFloat (infer env e); TInt
+    | Dir (CastFloat, e) -> unify TInt (infer env e); TFloat
   with Unify (expect, actual) -> unify_error expr expect actual
 
 let rec infer_global env expr =

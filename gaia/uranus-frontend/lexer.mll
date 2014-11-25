@@ -46,6 +46,8 @@ rule token = parse
   | '-'             { MINUS }
   | '*'             { AST }
   | '/'             { SLASH }
+  | "<<"            { SHL }
+  | ">>"            { SHR }
   | "+."            { PLUSDOT }
   | "-."            { MINUSDOT }
   | "*."            { ASTDOT }
