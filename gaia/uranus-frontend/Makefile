@@ -5,7 +5,7 @@ OPTION  = -use-menhir
 all: $(PROGRAM)
 
 $(PROGRAM): *.ml *.mll *.mly
-	ocamlbuild main.native -lib str -no-links $(OPTION)
+	ocamlbuild main.native -r -lib str -no-links $(OPTION)
 	cp _build/main.native $(PROGRAM)
 
 .PHONY: clean

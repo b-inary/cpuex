@@ -24,7 +24,7 @@ let input_all ic =
       loop acc (size + n) buf (ofs + n) in
   loop [] 0 (Bytes.create buf_size) 0
 
-(* String map library *)
+(* String map *)
 module M = struct
   include Map.Make (String)
   let add_list keys data t =

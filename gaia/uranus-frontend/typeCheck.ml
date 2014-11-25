@@ -146,7 +146,7 @@ let rec deref_tyvar = function
     TTuple ts -> TTuple (List.map deref_tyvar ts)
   | TArray t -> TArray (deref_tyvar t)
   | TFun (t, ts) -> TFun (deref_tyvar t, List.map deref_tyvar ts)
-  | TVar {contents = None} -> TUnit (* monomorphic *)
+  | TVar {contents = None} -> TInt (* monomorphic *)
   | TVar {contents = Some t} -> deref_tyvar t
   | t -> t
 
