@@ -15,6 +15,7 @@ let parse lexbuf =
 
 let () =
   let libname = "uranuslib.ml" in
+  let libpath = Filename.dirname Sys.argv.(0) ^ Filename.dir_sep ^ libname in
   let inputs = ref [] in
   let outfile = ref "" in
   let nolib = ref false in
@@ -29,7 +30,7 @@ let () =
     (sprintf "Usage: %s [options] file..." Sys.argv.(0));
   if !inputs = [] && !outfile = "" then nolib := true;
   inputs := if !inputs = [] then ["<stdin>"] else List.rev !inputs;
-  inputs := if !nolib then !inputs else libname :: !inputs;
+  inputs := if !nolib then !inputs else libpath :: !inputs;
   let read fname =
     let ic = if fname = "<stdin>" then stdin else open_in fname in
     sprintf "#file %s/\n%s" (Filename.basename fname) (input_all ic) in

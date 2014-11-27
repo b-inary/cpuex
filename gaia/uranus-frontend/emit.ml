@@ -300,12 +300,8 @@ let add_global name ty =
   incr global_id;
   let name' = sprintf "@%s.%d" name !global_id in
   if ty <> TUnit then begin
-    let s = match ty with
-        TBool -> "i1 false"
-      | TInt -> "i32 0"
-      | TFloat -> "float 0."
-      | _ -> sprintf "%s null" (ttos ty) in
-    global_buf := sprintf "%s = private global %s" name' s :: !global_buf
+    let s = sprintf "%s = private global %s undef" name' (ttos ty) in
+    global_buf := s :: !global_buf
   end;
   name'
 
@@ -373,7 +369,7 @@ let emit oc globenv ast inlineall =
         go env e2
     | expr -> ignore (insert_let env expr) in
   newline oc;
-  emit_string oc "target datalayout = \"n32\"";
+  emit_string oc "target datalayout = \"p:32:32-i1:32-i8:32-n32\"";
   newline oc;
   add_line_noindent "define i32 @main() nounwind {";
   go M.empty ast;
