@@ -1,30 +1,44 @@
 
 open Mylib
 open Printf
+open Lexing
 
-let parse buf =
+let parse lexbuf =
   let error msg =
-    let pos = buf.Lexing.lex_start_p in
+    let pos = lexbuf.lex_start_p in
     eprintf "%s:%d:%d: error: %s\n"
-      pos.Lexing.pos_fname
-      pos.Lexing.pos_lnum
-      (pos.Lexing.pos_cnum - pos.Lexing.pos_bol + 1)
-      msg;
+      pos.pos_fname pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1) msg;
     exit 1 in
-  try Parser.top Lexer.token buf with
-      Failure "parse" -> error (sprintf "parse error near '%s'" (Lexing.lexeme buf))
+  try Parser.top Lexer.token lexbuf with
+      Failure "parse" -> error (sprintf "parse error near '%s'" (lexeme lexbuf))
     | Failure msg -> error msg
 
 let () =
-  let argv = Sys.argv |> Array.to_list |> List.tl in
-  let inputs = "uranuslib.ml" :: (if argv = [] then ["<stdin>"] else argv) in
+  let libname = "uranuslib.ml" in
+  let inputs = ref [] in
+  let outfile = ref "" in
+  let nolib = ref false in
+  let inlineall = ref false in
+  let speclist = [
+    ("-o", Arg.Set_string outfile, "<file> Set output file name");
+    ("-no-lib", Arg.Set nolib, " Do not link " ^ libname);
+    ("-always-inline", Arg.Set inlineall, " Specify \"alwaysinline\" attribute")
+  ] in
+  Arg.parse (Arg.align speclist)
+    (fun fname -> inputs := fname :: !inputs)
+    (sprintf "Usage: %s [options] file..." Sys.argv.(0));
+  if !inputs = [] && !outfile = "" then nolib := true;
+  inputs := if !inputs = [] then ["<stdin>"] else List.rev !inputs;
+  inputs := if !nolib then !inputs else libname :: !inputs;
   let read fname =
     let ic = if fname = "<stdin>" then stdin else open_in fname in
-    let pos = try String.rindex fname '/' with Not_found -> -1 in
-    let fname = String.sub fname (pos + 1) (String.length fname - pos - 1) in
-    sprintf "#file %s/\n%s" fname (input_all ic) in
-  let content = String.concat "" (List.map read inputs) in
-  let ast = parse (Lexing.from_string content) in
-  let global_env = TypeCheck.type_check ast in
-  Emit.emit global_env ast
+    sprintf "#file %s/\n%s" (Filename.basename fname) (input_all ic) in
+  let prog = String.concat "" (List.map read !inputs) in
+  let ast = parse (Lexing.from_string prog) in
+  let globenv = TypeCheck.type_check ast in
+  let oc =
+    if !outfile <> "" then open_out !outfile else
+    if !inputs = ["<stdin>"] then stdout else
+    open_out (Filename.chop_extension (List.hd (List.rev !inputs)) ^ ".ll") in
+  Emit.emit oc globenv ast !inlineall
 

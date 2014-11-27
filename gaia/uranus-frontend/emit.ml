@@ -317,16 +317,19 @@ let fundef_str name args retty argsty =
   let f (a, t) = sprintf "%s %%%s" (ttos t) a in
   let args' = List.filter (fun arg -> snd arg <> TUnit) (List.combine args argsty) in
   let args_str = String.concat ", " (List.map f args') in
-  sprintf "define private %s %s(%s) {" (ttos retty) name args_str
+  sprintf "define private %s %s(%s) #0 {" (ttos retty) name args_str
 
-let emit_buf buf =
+let newline oc = output_string oc "\n"
+let emit_string oc str = output_string oc str; newline oc
+
+let emit_buf oc buf =
   let re = Str.regexp "\\$[0-9]+" in
   let subst s = M.find (Str.matched_string s) !label_table in
-  let print line = print_endline (Str.global_substitute re subst line) in
-  print_endline "";
-  List.iter print (List.rev buf)
+  let print line = emit_string oc (Str.global_substitute re subst line) in
+  List.iter print (List.rev buf);
+  newline oc
 
-let emit global_env ast =
+let emit oc globenv ast inlineall =
   let rec go env = function
       Let (name, e1, e2) ->
         let (atom, ty) = insert_let env e1 in
@@ -338,7 +341,7 @@ let emit global_env ast =
         push_main ();
         reset ();
         let name' = add_func name in
-        let ty = M.find name' global_env in
+        let ty = M.find name' globenv in
         let (retty, argsty) = match ty with
             TFun (r, a) -> (r, a)
           | _ -> failwith "emit: something wrong" in
@@ -350,7 +353,7 @@ let emit global_env ast =
         if retty = TUnit then add_line "ret void" else
         add_line "ret %s %s" (ttos retty) (atos atom);
         add_line_noindent "}";
-        emit_buf !output_buf;
+        emit_buf oc !output_buf;
         pop_main ();
         go env' e2
     | LetTpl (names, e1, e2) ->
@@ -369,20 +372,24 @@ let emit global_env ast =
         ignore (insert_let env e1);
         go env e2
     | expr -> ignore (insert_let env expr) in
-  print_endline "";
-  print_endline "target datalayout = \"n32\"";
-  add_line_noindent "define i32 @main() {";
+  newline oc;
+  emit_string oc "target datalayout = \"n32\"";
+  newline oc;
+  add_line_noindent "define i32 @main() nounwind {";
   go M.empty ast;
   add_line "ret i32 0";
   add_line_noindent "}";
-  emit_buf !output_buf;
-  emit_buf !global_buf;
-  print_endline "";
-  print_endline "declare i32 @read() nounwind";
-  print_endline "declare void @write(i32) nounwind";
-  print_endline "declare float @llvm.fabs.f32(float)";
-  print_endline "declare float @llvm.sqrt.f32(float)";
-  print_endline "declare float @llvm.floor.f32(float)";
-  print_endline "declare noalias i8* @malloc(i32) nounwind";
-  print_endline ""
+  emit_buf oc !output_buf;
+  emit_buf oc !global_buf;
+  output_buf := [];
+  add_line_noindent "declare i32 @read() nounwind";
+  add_line_noindent "declare void @write(i32) nounwind";
+  add_line_noindent "declare float @llvm.fabs.f32(float) nounwind readonly";
+  add_line_noindent "declare float @llvm.sqrt.f32(float) nounwind readonly";
+  add_line_noindent "declare float @llvm.floor.f32(float) nounwind readonly";
+  add_line_noindent "declare noalias i8* @malloc(i32) nounwind";
+  add_line_noindent "";
+  add_line_noindent "attributes #0 = { %s }"
+    (if inlineall then "nounwind alwaysinline" else "nounwind");
+  emit_buf oc !output_buf
 

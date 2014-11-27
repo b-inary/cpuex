@@ -29,6 +29,10 @@ let unify_error expr expect actual =
   let act = type_to_string actual in
   error expr (sprintf "type error: expected %s, but got %s" exp act)
 
+let unbound_error name =
+  eprintf "error: unbound variable '%s'\n" name;
+  exit 1
+
 
 exception Unify of ty * ty (* expected type, actual type *)
 
@@ -66,7 +70,7 @@ let rec infer env expr =
     | Atom (Var name) when M.mem name env -> M.find name env
     | Atom (Var name) when M.mem name !global_table ->
         M.find (M.find name !global_table) env
-    | Atom (Var name) -> eprintf "error: unbound variable '%s'\n" name; exit 1
+    | Atom (Var name) -> unbound_error name
     | Not e -> unify TBool (infer env e); TBool
     | IOp (_, e1, e2) ->
         unify TInt (infer env e1);
@@ -84,8 +88,7 @@ let rec infer env expr =
           if M.mem func env then M.find func env else
           if M.mem func !global_table then
             M.find (M.find func !global_table) env
-          else
-            (eprintf "error: unbound variable '%s'\n" func; exit 1) in
+          else unbound_error func in
         unify (TFun (retty, List.map (infer env) args)) functy;
         retty
     | App _ -> error expr "function must be an identifier"
