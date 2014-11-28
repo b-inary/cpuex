@@ -3,7 +3,7 @@ FRONT = urns-front
 TARGETS = $(FRONT)
 
 FRONTFLAGS = -use-menhir
-FRONTDIR = uranus-frontend
+FRONTDIR = frontend
 
 all: $(TARGETS)
 

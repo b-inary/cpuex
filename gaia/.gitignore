@@ -3,3 +3,4 @@ _build/
 *.ll
 *.s
 *.out
+test.*
