@@ -232,7 +232,7 @@ and dir atom = function
       (Var ret, TFloat)
   | FtoI ->
       let ret = new_ident () in
-      add_line "%s = fptosi float %s to i32" ret (atos atom);
+      add_line "%s = call i32 @ftoi(float %s)" ret (atos atom);
       (Var ret, TInt)
   | Floor ->
       let ret = new_ident () in
@@ -380,6 +380,7 @@ let emit oc globenv ast inlineall =
   output_buf := [];
   add_line_noindent "declare i32 @read() nounwind";
   add_line_noindent "declare void @write(i32) nounwind";
+  add_line_noindent "declare i32 @ftoi(float) nounwind readonly";
   add_line_noindent "declare float @llvm.fabs.f32(float) nounwind readonly";
   add_line_noindent "declare float @llvm.sqrt.f32(float) nounwind readonly";
   add_line_noindent "declare float @llvm.floor.f32(float) nounwind readonly";
