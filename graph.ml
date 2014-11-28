@@ -1,6 +1,6 @@
 
 let rec f x = floor x in
-let rec g x = 100.0 in
+let rec g x = 100. in
 
 let x_start = -10. in
 let x_end   =  10. in
@@ -29,11 +29,11 @@ let _ =
 in
 
 
-let x_unit = (x_end -. x_start) /. (float_of_int size) in
-let y_unit = (y_end -. y_start) /. (float_of_int size) in
+let x_unit = (x_end -. x_start) /. float_of_int size in
+let y_unit = (y_end -. y_start) /. float_of_int size in
 
-let rec posx x = x_start +. (float_of_int x +. 0.5) *. x_unit in
-let rec posy y = y_start +. (float_of_int y +. 0.5) *. y_unit in
+let rec posx x = x_start +. float_of_int x *. x_unit in
+let rec posy y = y_start +. float_of_int y *. y_unit in
 
 let rec print a b c =
     print_char a;
