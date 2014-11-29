@@ -1,5 +1,6 @@
 
 (* floating point operations *)
+(* fabs and sqrt are implemented in compiler *)
 let fequal x y = x = y
 let fless x y = x < y
 let fispos x = x > 0.
@@ -40,8 +41,8 @@ let __kernel_cos x =
   1.0 +. sq *. (-0.5 +. sq *. (0.04166368 +. sq *. -0.0013695068))
 let __kernel_atan x =
   let sq = x *. x in
-  x *. (1.0 +. sq *. (-0.3333333 +. sq *. (0.2 +. sq *. (-0.14285715 +. sq *.
-    (0.111111104 +. sq *. (-0.08976446 +. sq *. 0.060035486))))))
+  x *. (1.0 +. sq *. (-0.3333333 +. sq *. (0.2 +. sq *. (-0.14285715 +.
+    sq *. (0.111111104 +. sq *. (-0.08976446 +. sq *. 0.060035486))))))
 let __double x upper =
   let d = 2.0 *. x in
   if upper < d then x else __double d upper
@@ -58,9 +59,8 @@ let sin x =
   let x1 = __reduction (fabs x) in
   let x2 = if x1 < pi  then x1 else x1 -. pi in
   let x3 = if x2 < pih then x2 else pi -. x2 in
-  let abs = if x3 < piq then __kernel_sin x3 else __kernel_cos (pih -. x3) in
-  let sign = (0.0 <= x) = (x1 < pi) in (* true => positive *)
-  if sign then abs else fneg abs
+  let res = if x3 < piq then __kernel_sin x3 else __kernel_cos (pih -. x3) in
+  if (0.0 <= x) = (x1 < pi) then res else fneg res
 let cos x =
   let piq = 0.78539816 in
   let pih = 1.57079633 in
@@ -68,18 +68,17 @@ let cos x =
   let x1 = __reduction (fabs x) in
   let x2 = if x1 < pi  then x1 else x1 -. pi in
   let x3 = if x2 < pih then x2 else pi -. x2 in
-  let abs = if x3 < piq then __kernel_cos x3 else __kernel_sin (pih -. x3) in
-  let sign = (x1 < pi) = (x2 < pih) in
-  if sign then abs else fneg abs
+  let res = if x3 < piq then __kernel_cos x3 else __kernel_sin (pih -. x3) in
+  if (x1 < pi) = (x2 < pih) then res else fneg res
 let atan x =
   let piq = 0.78539816 in
   let pih = 1.57079633 in
   let xabs = fabs x in
   if xabs < 0.4375 then __kernel_atan x
   else
-    let abs =
+    let res =
       if xabs > 2.4375 then pih -. __kernel_atan (1.0 /. xabs)
       else piq +. __kernel_atan ((xabs -. 1.0) /. (xabs +. 1.0)) in
-    if x >= 0.0 then abs else fneg abs
+    if x >= 0.0 then res else fneg res
 
 ;;

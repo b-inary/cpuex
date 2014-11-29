@@ -274,14 +274,14 @@ and insert_let env expr =
     | Cmp (GT, e1, e2) -> cmp env e1 e2 "sgt" "ogt"
     | Cmp (GE, e1, e2) -> cmp env e1 e2 "sge" "oge"
     | App (Atom (Var func), args) -> app env func args
-    | App _ -> failwith "insert_let: something wrong"
+    | App _ -> failwith "insert_let: app: something wrong"
     | Tuple l -> tuple env l
     | MakeAry (e1, e2) -> create_array env e1 e2
     | Get (e1, e2) -> get env e1 e2
     | Put (e1, e2, e3) -> put env e1 e2 e3
     | If (e1, e2, e3) -> branch env e1 e2 e3
     | Let (v, e1, e2) -> bind env v e1 e2
-    | LetFun _ -> failwith "insert_let: something wrong"
+    | LetFun _ -> failwith "insert_let: letfun: something wrong"
     | LetTpl (l, e1, e2) -> bind_tuple env l e1 e2
     | Seq (e1, e2) -> ignore (insert_let env e1); insert_let env e2
     | Dir (d, e) -> dir (fst (insert_let env e)) d
@@ -344,7 +344,7 @@ let emit oc globenv ast inlineall =
         let ty = M.find name' globenv in
         let (retty, argsty) = match ty with
             TFun (r, a) -> (r, a)
-          | _ -> failwith "emit: something wrong" in
+          | _ -> failwith "emit: letfun: something wrong" in
         add_line_noindent "%s" (fundef_str name' args retty argsty);
         let env' = M.add name (Var name', ty) env in
         let argsmap = List.map2 (fun a t -> (Var ("%" ^ a), t)) args argsty in

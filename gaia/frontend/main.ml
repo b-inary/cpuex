@@ -15,7 +15,7 @@ let parse lexbuf =
 
 let () =
   let libname = "uranuslib.ml" in
-  let libpath = Filename.dirname Sys.argv.(0) ^ Filename.dir_sep ^ libname in
+  let libpath = Filename.concat (Filename.dirname Sys.argv.(0)) libname in
   let inputs = ref [] in
   let outfile = ref "" in
   let nolib = ref false in
