@@ -33,17 +33,21 @@ let floor f = #floor f
 
 (* trigonometric functions *)
 let __kernel_sin x =
-  let sq = fsqr x in
-  x *. (1.0 +. sq *. (-0.16666668 +. sq *. (0.008332824 +. sq *. -0.00019587841)))
+  let sq = x *. x in
+  x *. (1.0 +. sq *. (-0.16666669 +. sq *. (0.008332824 +. sq *. -0.00019587841)))
 let __kernel_cos x =
-  let sq = fsqr x in
+  let sq = x *. x in
   1.0 +. sq *. (-0.5 +. sq *. (0.04166368 +. sq *. -0.0013695068))
+let __kernel_atan x =
+  let sq = x *. x in
+  x *. (1.0 +. sq *. (-0.3333333 +. sq *. (0.2 +. sq *. (-0.14285715 +. sq *.
+    (0.111111104 +. sq *. (-0.08976446 +. sq *. 0.060035486))))))
 let __double x upper =
   let d = 2.0 *. x in
   if upper < d then x else __double d upper
 let __reduction_loop x p =
-  if p < 4. then x else
-  __reduction_loop (if x >= p then x -. p else x) (p *. 0.5)
+  if p < 4.0 then x else
+  __reduction_loop (if x < p then x else x -. p) (p *. 0.5)
 let __reduction x =
   let pi2 = 6.2831853 in
   __reduction_loop x (__double pi2 x)
@@ -55,7 +59,7 @@ let sin x =
   let x2 = if x1 < pi  then x1 else x1 -. pi in
   let x3 = if x2 < pih then x2 else pi -. x2 in
   let abs = if x3 < piq then __kernel_sin x3 else __kernel_cos (pih -. x3) in
-  let sign = (0. <= x) = (x1 < pi) in (* true => positive *)
+  let sign = (0.0 <= x) = (x1 < pi) in (* true => positive *)
   if sign then abs else fneg abs
 let cos x =
   let piq = 0.78539816 in
@@ -67,6 +71,15 @@ let cos x =
   let abs = if x3 < piq then __kernel_cos x3 else __kernel_sin (pih -. x3) in
   let sign = (x1 < pi) = (x2 < pih) in
   if sign then abs else fneg abs
-let atan x = x (* TODO *)
+let atan x =
+  let piq = 0.78539816 in
+  let pih = 1.57079633 in
+  let xabs = fabs x in
+  if xabs < 0.4375 then __kernel_atan x
+  else
+    let abs =
+      if xabs > 2.4375 then pih -. __kernel_atan (1.0 /. xabs)
+      else piq +. __kernel_atan ((xabs -. 1.0) /. (xabs +. 1.0)) in
+    if x >= 0.0 then abs else fneg abs
 
 ;;
