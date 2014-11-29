@@ -290,11 +290,15 @@ and insert_let env expr =
 
 let main_buf = ref []
 let main_id = ref 0
+let main_cur = ref "%0"
 let global_buf = ref []
 let global_id = ref (-1)
-let reset () = output_buf := []; id_counter := 0; current_label := "%0"
-let push_main () = main_buf := !output_buf; main_id := !id_counter
-let pop_main () = output_buf := !main_buf; id_counter := !main_id
+let reset () =
+  output_buf := []; id_counter := 0; current_label := "%0"
+let push_main () =
+  main_buf := !output_buf; main_id := !id_counter; main_cur := !current_label
+let pop_main () =
+  output_buf := !main_buf; id_counter := !main_id; current_label := !main_cur
 
 let add_global name ty =
   incr global_id;
