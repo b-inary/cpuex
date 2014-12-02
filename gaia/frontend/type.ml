@@ -27,7 +27,7 @@ let type_to_string t =
     | TVar ({contents = None} as r) ->
         if not (List.mem_assq r !vars) then
           vars := (r, Char.chr (97 + List.length !vars)) :: !vars;
-        sprintf "%c'" (List.assq r !vars)
+        sprintf "'_%c" (List.assq r !vars)
 
   and go_list fmt = function
       [], _, _ -> ""
