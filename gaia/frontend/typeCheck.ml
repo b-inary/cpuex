@@ -132,6 +132,8 @@ let rec infer_global env expr =
         let name' = add_global name in
         infer_global (M.add name' ty env) e2
     | LetFun (name, args, e1, e2) ->
+        if List.length (List.sort_uniq compare args) < List.length args then
+          error expr "duplicated argument name";
         let name' = add_global name in
         let argsty = List.map (fun a -> if a = "Unit" then TUnit else new_tyvar ()) args in
         let ty = TFun (new_tyvar (), argsty) in
