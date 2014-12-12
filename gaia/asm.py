@@ -170,14 +170,14 @@ def on_other3(operands, op, pred):
     return code_m(op, operands[0], operands[1], pred, operands[2])
 
 alu3_table = {
-    'cmpne':     8,
-    'cmpeq':     9,
-    'cmplt':    10,
-    'cmple':    11,
-    'fcmpne':   12,
-    'fcmpeq':   13,
-    'fcmplt':   14,
-    'fcmple':   15,
+    'cmpne':    24,
+    'cmpeq':    25,
+    'cmplt':    26,
+    'cmple':    27,
+    'fcmpne':   28,
+    'fcmpeq':   29,
+    'fcmplt':   30,
+    'fcmple':   31
 }
 
 alu4_table = {
@@ -275,16 +275,6 @@ def expand_mov(operands):
     check_operands_n(operands, 2)
     if is_reg(operands[0]) and is_reg(operands[1]):
         return ['add {}, {}, r0, 0'.format(operands[0], operands[1])]
-    success, base, disp = parse_memaccess(operands[1])
-    if success:
-        if disp & 3 != 0:
-            error('displacement must be multiple of 4')
-        return ['ld {}, {}, {}'.format(operands[0], base, disp >> 2)]
-    success, base, disp = parse_memaccess(operands[0])
-    if success:
-        if disp & 3 != 0:
-            error('displacement must be multiple of 4')
-        return ['st {}, {}, {}'.format(operands[1], base, disp >> 2)]
     success, imm = parse_imm(operands[1])
     if success:
         if check_imm_range(imm, 16):
@@ -300,6 +290,24 @@ def expand_mov(operands):
             'ldl {}, {}'.format(operands[0], cast_short(b)),
             'ldh {}, {}, {}'.format(operands[0], operands[0], cast_short(b >> 16))
         ]
+    success, base, disp = parse_memaccess(operands[1])
+    if success:
+        if disp & 3 != 0:
+            error('displacement must be multiple of 4')
+        return ['ld {}, {}, {}'.format(operands[0], base, disp >> 2)]
+    m = re.match(r'\[(.+)\]$', operands[1])
+    if m:
+        return ['ld {}, r0, {}'.format(operands[0], m.group(1))]
+    if is_reg(operands[0]):
+        return ['__movl {}, {}'.format(operands[0], operands[1])]
+    success, base, disp = parse_memaccess(operands[0])
+    if success:
+        if disp & 3 != 0:
+            error('displacement must be multiple of 4')
+        return ['st {}, {}, {}'.format(operands[1], base, disp >> 2)]
+    m = re.match(r'\[(.+)\]$', operands[0])
+    if m:
+        return ['st {}, r0, {}'.format(operands[1], m.group(1))]
     error('invalid syntax')
 
 def expand_alu(op, operands):
@@ -501,14 +509,15 @@ def check_global(label):
     if labels[label][filename][0] < 0:
         error('label \'{}\' is not declared'.format(label))
 
-def subst(label, cur):
+def subst(label, cur, rel):
     if parse_imm(label)[0]:
         return label
     if label not in labels:
         error('label \'{}\' is not declared'.format(label))
+    offset = -cur - 1 if rel else 0x1000
     if filename in labels[label]:
         labels[label][filename][2] = True
-        return str(labels[label][filename][0] - cur - 1)
+        return str(labels[label][filename][0] + offset)
     else:
         decl = ''
         for key in labels[label]:
@@ -519,7 +528,7 @@ def subst(label, cur):
         if not decl:
             error('label \'{}\' is not declared'.format(label))
         labels[label][decl][2] = True
-        return str(labels[label][decl][0] - cur - 1)
+        return str(labels[label][decl][0] + offset)
 
 def warn_unused_label(label):
     if not labels[label][filename][2] and not (filename == library and labels[label][filename][1]):
@@ -585,10 +594,23 @@ for line, filename, pos in lines1:
         i += 1
 for i, (line, filename, pos) in enumerate(lines2):
     mnemonic, operands = parse(line)
+    if mnemonic in ['ld', 'st']:
+        check_operands_n(operands, 3)
+        operands[-1] = subst(operands[-1], i, False)
     if mnemonic in ['jl', 'bne', 'bne-', 'bne+', 'beq', 'beq-', 'beq+']:
         check_operands_n(operands, 2, 3)
-        operands[-1] = subst(operands[-1], i)
-    lines3.append(('{} {}'.format(mnemonic, ', '.join(operands)), filename, pos))
+        operands[-1] = subst(operands[-1], i, True)
+    if mnemonic == '__movl':
+        imm = int(subst(operands[1], i, False))
+        if imm >= 0x8000:
+            lines3.extend([
+                ('ldl {}, {}'.format(operands[0], cast_short(imm)), filename, pos),
+                ('ldh {}, {}, {}'.format(operands[0], operands[0], cast_short(imm >> 16)), filename, pos)
+            ])
+        else:
+            lines3.append(('ldl {}, {}'.format(operands[0], imm), filename, pos))
+    else:
+        lines3.append(('{} {}'.format(mnemonic, ', '.join(operands)), filename, pos))
 for line, filename, pos in lines1:
     mnemonic, operands = parse(line)
     if mnemonic[-1] == ':':

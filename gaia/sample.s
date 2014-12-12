@@ -57,8 +57,11 @@ main:
     mov     r1, 2
     mov     r1, 234567
     mov     r1, 2.3
+    mov     r1, label
     mov     r1, [r2 + 4]
+    mov     r1, [label]
     mov     [r1 - 8], r2
+    mov     [label], r1
     add     r1, r2, r3
     add     r1, r2, 3
     add     r1, r2, 345678
