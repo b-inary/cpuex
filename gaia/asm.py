@@ -42,7 +42,15 @@ def parse_float(operand):
     except ValueError:
         return False, 0.0
 
-def float_bit(f):
+def check_imm_range(imm, b):
+    x = 1 << (b - 1)
+    return -x <= imm < x
+
+def cast_short(imm):
+    imm = imm & 0xffff
+    return imm if imm < 0x8000 else imm - 0x10000
+
+def float_to_bit(f):
     try:
         s = struct.pack('>f', f)
         return struct.unpack('>i', s)[0]
@@ -65,18 +73,11 @@ def parse_memaccess(operand):
     return False, 'r0', 0
 
 def check_operands_n(operands, n, m=-1):
-    if len(operands) < n:
-        error('too few operands')
-    if len(operands) > max(n, m):
-        error('too many operands')
-
-def check_imm_range(imm, b):
-    x = 1 << (b - 1)
-    return -x <= imm < x
-
-def cast_short(imm):
-    imm = imm & 0xffff
-    return imm if imm < 0x8000 else imm - 0x10000
+    l = len(operands)
+    if l < n:
+        error('too few operands: {} expected ({} given)'.format(n, l))
+    if l > max(n, m):
+        error('too many operands: {} expected ({} given)'.format(max(n, m), l))
 
 def regnum(reg):
     if reg not in regs:
@@ -87,15 +88,15 @@ def code_i(rx, ra, rb, imm, tag):
     x = regnum(rx)
     a = regnum(ra)
     b = regnum(rb)
-    success, imm = parse_imm(imm)
+    success, i = parse_imm(imm)
     if not success:
-        error('invalid syntax: expected immediate value')
-    if not check_imm_range(imm, 8):
-        error('immediate value exceeds valid range')
+        error(imm + ' is not an immediate value')
+    if not check_imm_range(i, 8):
+        error('immediate value ' + imm + ' exceeds valid range')
     c1 = x >> 1
     c2 = ((x & 1) << 7) + (a << 2) + (b >> 3)
-    c3 = ((b & 7) << 5) + ((imm >> 3) & 31)
-    c4 = ((imm & 7) << 5) + tag
+    c3 = ((b & 7) << 5) + ((i >> 3) & 31)
+    c4 = ((i & 7) << 5) + tag
     return chr(c1) + chr(c2) + chr(c3) + chr(c4)
 
 def code_f(rx, ra, rb, sign, tag):
@@ -108,18 +109,22 @@ def code_f(rx, ra, rb, sign, tag):
     c4 = (sign << 5) + tag
     return chr(c1) + chr(c2) + chr(c3) + chr(c4)
 
-def code_m(op, rx, ra, pred, disp):
+def code_m(op, rx, ra, pred, disp, disp_mode):
     x = regnum(rx)
     a = regnum(ra)
-    success, disp = parse_imm(disp)
+    success, d = parse_imm(disp)
     if not success:
         error('invalid syntax: expected displacement')
-    if not check_imm_range(disp, 16):
-        error('displacement exceeds valid range')
+    if disp_mode:
+        if d & 3 != 0:
+            error('displacement ' + disp + ' is not multiple of 4')
+        d >>= 2
+    if not check_imm_range(d, 16):
+        error('displacement ' + disp + ' exceeds valid range')
     c1 = (op << 4) + (x >> 1)
     c2 = ((x & 1) << 7) + (a << 2) + pred
-    c3 = (disp >> 8) & 255
-    c4 = disp & 255
+    c3 = (d >> 8) & 255
+    c4 = d & 255
     return chr(c1) + chr(c2) + chr(c3) + chr(c4)
 
 def parse(line):
@@ -157,27 +162,23 @@ def on_fpu3(operands, sign, tag):
 #     check_operands_n(operands, 2)
 #     return code_m(op, 'r0', 'r0', pred, '0')
 
-def on_other1(operands, op, pred):
+def on_other1(operands, op, pred, disp_mode):
     check_operands_n(operands, 1)
-    return code_m(op, operands[0], 'r0', pred, '0')
+    return code_m(op, operands[0], 'r0', pred, '0', disp_mode)
 
-def on_other2(operands, op, pred):
+def on_other2(operands, op, pred, disp_mode):
     check_operands_n(operands, 2)
-    return code_m(op, operands[0], 'r0', pred, operands[1])
+    return code_m(op, operands[0], 'r0', pred, operands[1], disp_mode)
 
-def on_other3(operands, op, pred):
+def on_other3(operands, op, pred, disp_mode):
     check_operands_n(operands, 3)
-    return code_m(op, operands[0], operands[1], pred, operands[2])
+    return code_m(op, operands[0], operands[1], pred, operands[2], disp_mode)
 
 alu3_table = {
-    'cmpne':    24,
-    'cmpeq':    25,
-    'cmplt':    26,
-    'cmple':    27,
     'fcmpne':   28,
     'fcmpeq':   29,
     'fcmplt':   30,
-    'fcmple':   31
+    'fcmple':   31,
 }
 
 alu4_table = {
@@ -188,7 +189,11 @@ alu4_table = {
     'sar':       4,
     'and':       5,
     'or':        6,
-    'xor':       7
+    'xor':       7,
+    'cmpne':    24,
+    'cmpeq':    25,
+    'cmplt':    26,
+    'cmple':    27,
 }
 
 fpu2_table = {
@@ -196,28 +201,28 @@ fpu2_table = {
     'fsqrt':     5,
     'ftoi':      6,
     'itof':      7,
-    'floor':     8
+    'floor':     8,
 }
 
 fpu3_table = {
     'fadd':      0,
     'fsub':      1,
     'fmul':      2,
-    'fdiv':      3
+    'fdiv':      3,
 }
 
 # other0_table = {
 #     'sysenter':  4,
-#     'sysexit':   5
+#     'sysexit':   5,
 # }
 
 other1_table = {
-    'jr':       12
+    'jr':       12,
 }
 
 other2_table = {
     'ldl':       2,
-    'jl':       11
+    'jl':       11,
 }
 
 other3_table = {
@@ -225,14 +230,14 @@ other3_table = {
     'st':        6,
     'ld':        8,
     'bne':      13,
-    'beq':      15
+    'beq':      15,
 }
 
 sign_table = {
     '':          0,
     'neg':       1,
     'abs':       2,
-    'abs.neg':   3
+    'abs.neg':   3,
 }
 
 def code(mnemonic, operands):
@@ -247,20 +252,21 @@ def code(mnemonic, operands):
         return on_fpu2(operands, sign_table[fpu_suffix], fpu2_table[fpu_mnemonic])
     if fpu_mnemonic in fpu3_table:
         return on_fpu3(operands, sign_table[fpu_suffix], fpu3_table[fpu_mnemonic])
-    pred = 0
-    if mnemonic in ['jl', 'jr', 'bne+', 'beq+']:
-        pred = 3
+    pred = 3 if mnemonic in ['jl', 'jr', 'bne+', 'beq+'] else 0
+    disp_mode = False if mnemonic in ['ldl', 'ldh'] else True
     if mnemonic in ['bne-', 'bne+']:
         mnemonic = 'bne'
     if mnemonic in ['beq-', 'beq+']:
         mnemonic = 'beq'
+    # if mnemonic in other0_table:
+    #     return on_other0(operands, other0_table[mnemonic], pred, disp_mode)
     if mnemonic in other1_table:
-        return on_other1(operands, other1_table[mnemonic], pred)
+        return on_other1(operands, other1_table[mnemonic], pred, disp_mode)
     if mnemonic in other2_table:
-        return on_other2(operands, other2_table[mnemonic], pred)
+        return on_other2(operands, other2_table[mnemonic], pred, disp_mode)
     if mnemonic in other3_table:
-        return on_other3(operands, other3_table[mnemonic], pred)
-    error('unknown mnemonic')
+        return on_other3(operands, other3_table[mnemonic], pred, disp_mode)
+    error('unknown mnemonic: ' + mnemonic)
 
 
 # ----------------------------------------------------------------------
@@ -271,69 +277,64 @@ def expand_nop(operands):
     check_operands_n(operands, 0)
     return ['add r0, r0, r0, 0']
 
+def mov_imm(dest, imm):
+    if check_imm_range(imm, 16):
+        return ['ldl {}, {}'.format(dest, imm)]
+    return [
+        'ldl {}, {}'.format(dest, cast_short(imm)),
+        'ldh {0}, {0}, {1}'.format(dest, cast_short(imm >> 16))
+    ]
+
 def expand_mov(operands):
     check_operands_n(operands, 2)
     if is_reg(operands[0]) and is_reg(operands[1]):
         return ['add {}, {}, r0, 0'.format(operands[0], operands[1])]
     success, imm = parse_imm(operands[1])
     if success:
-        if check_imm_range(imm, 16):
-            return ['ldl {}, {}'.format(operands[0], operands[1])]
-        return [
-            'ldl {}, {}'.format(operands[0], cast_short(imm)),
-            'ldh {}, {}, {}'.format(operands[0], operands[0], cast_short(imm >> 16))
-        ]
+        return mov_imm(operands[0], imm)
     success, imm = parse_float(operands[1])
     if success:
-        b = float_bit(imm)
-        return [
-            'ldl {}, {}'.format(operands[0], cast_short(b)),
-            'ldh {}, {}, {}'.format(operands[0], operands[0], cast_short(b >> 16))
-        ]
+        return mov_imm(operands[0], float_to_bit(imm))
     success, base, disp = parse_memaccess(operands[1])
     if success:
-        if disp & 3 != 0:
-            error('displacement must be multiple of 4')
-        return ['ld {}, {}, {}'.format(operands[0], base, disp >> 2)]
+        return ['ld {}, {}, {}'.format(operands[0], base, disp)]
+    success, base, disp = parse_memaccess(operands[0])
+    if success:
+        return ['st {}, {}, {}'.format(operands[1], base, disp)]
     m = re.match(r'\[(.+)\]$', operands[1])
     if m:
         return ['ld {}, r0, {}'.format(operands[0], m.group(1))]
-    if is_reg(operands[0]):
-        return ['__movl {}, {}'.format(operands[0], operands[1])]
-    success, base, disp = parse_memaccess(operands[0])
-    if success:
-        if disp & 3 != 0:
-            error('displacement must be multiple of 4')
-        return ['st {}, {}, {}'.format(operands[1], base, disp >> 2)]
     m = re.match(r'\[(.+)\]$', operands[0])
     if m:
         return ['st {}, r0, {}'.format(operands[1], m.group(1))]
+    if is_reg(operands[0]):
+        return ['__movl {}'.format(', '.join(operands))]
     error('invalid syntax')
 
 def expand_alu(op, operands):
-    check_operands_n(operands, 3, 4)
     if (len(operands) == 4):
         return ['{} {}'.format(op, ', '.join(operands))]
+    check_operands_n(operands, 3)
     if is_reg(operands[2]):
         return ['{} {}, 0'.format(op, ', '.join(operands))]
     success, imm = parse_imm(operands[2])
     if success:
         if check_imm_range(imm, 8):
             return ['{} {}, {}, r0, {}'.format(op, operands[0], operands[1], imm)]
-        return expand_mov(['r29', str(imm)]) + ['{} {}, {}, r29, 0'.format(op, operands[0], operands[1])]
+        return mov_imm('r29', imm) + ['{} {}, {}, r29, 0'.format(op, operands[0], operands[1])]
     error('invalid syntax')
 
 def expand_and(operands):
-    check_operands_n(operands, 3, 4)
     if (len(operands) == 4):
         return ['and {}'.format(', '.join(operands))]
+    check_operands_n(operands, 3)
     if is_reg(operands[2]):
         return ['and {}, -1'.format(', '.join(operands))]
     success, imm = parse_imm(operands[2])
     if success:
         if check_imm_range(imm, 8):
-            return ['and {}, {}, {}, {}'.format(operands[0], operands[1], operands[1], imm)]
-        return expand_mov(['r29', str(imm)]) + ['and {}, {}, r29, -1'.format(operands[0], operands[1])]
+            return ['and {0}, {1}, {1}, {2}'.format(operands[0], operands[1], imm)]
+        return mov_imm('r29', imm) + ['and {}, {}, r29, -1'.format(operands[0], operands[1])]
     error('invalid syntax')
 
 def expand_neg(operands):
@@ -344,27 +345,40 @@ def expand_not(operands):
     check_operands_n(operands, 2)
     return ['xor {}, {}, r0, -1'.format(operands[0], operands[1])]
 
-def expand_cmpgt(operands):
+def expand_cmp(op, operands):
+    if (len(operands) == 4):
+        return ['{} {}'.format(op, ', '.join(operands))]
     check_operands_n(operands, 3)
-    return ['cmple {}, {}, {}'.format(operands[0], operands[2], operands[1])]
-
-def expand_cmpge(operands):
-    check_operands_n(operands, 3)
-    return ['cmplt {}, {}, {}'.format(operands[0], operands[2], operands[1])]
+    if is_reg(operands[2]):
+        if op == 'cmpgt':
+            return ['cmplt {}, {}, {}, 0'.format(operands[0], operands[2], operands[1])]
+        if op == 'cmpge':
+            return ['cmple {}, {}, {}, 0'.format(operands[0], operands[2], operands[1])]
+        return ['{} {}, 0'.format(op, ', '.join(operands))]
+    success, imm = parse_imm(operands[2])
+    if success:
+        if op == 'cmpgt':
+            return mov_imm('r29', imm) + ['cmplt {}, r29, {}, 0'.format(operands[0], operands[1])]
+        if op == 'cmpge':
+            return mov_imm('r29', imm) + ['cmple {}, r29, {}, 0'.format(operands[0], operands[1])]
+        if check_imm_range(imm, 8):
+            return ['{} {}, {}, r0, {}'.format(op, operands[0], operands[1], imm)]
+        return mov_imm('r29', imm) + ['{} {}, {}, r29, 0'.format(op, operands[0], operands[1])]
+    error('invalid syntax')
 
 def expand_fcmpgt(operands):
     check_operands_n(operands, 3)
-    return ['fcmple {}, {}, {}'.format(operands[0], operands[2], operands[1])]
+    return ['fcmplt {}, {}, {}'.format(operands[0], operands[2], operands[1])]
 
 def expand_fcmpge(operands):
     check_operands_n(operands, 3)
-    return ['fcmplt {}, {}, {}'.format(operands[0], operands[2], operands[1])]
+    return ['fcmple {}, {}, {}'.format(operands[0], operands[2], operands[1])]
 
 def expand_read(operands):
     check_operands_n(operands, 1)
     return [
         'ld r29, r0, 0x3000',
-        'beq r29, r0, -2',
+        'beq r29, r0, -8',
         'ld {}, r0, 0x3004'.format(operands[0])
     ]
 
@@ -372,13 +386,47 @@ def expand_write(operands):
     check_operands_n(operands, 1)
     return [
         'ld r29, r0, 0x3008',
-        'beq r29, r0, -2',
+        'beq r29, r0, -8',
         'st {}, r0, 0x300c'.format(operands[0])
     ]
 
 def expand_br(operands):
     check_operands_n(operands, 1)
     return ['jl r29, {}'.format(operands[0])]
+
+def expand_bz(operands, pred):
+    return ['beq{} {}, r0, {}'.format(pred, operands[0], operands[1])]
+
+def expand_bnz(operands, pred):
+    return ['bne{} {}, r0, {}'.format(pred, operands[0], operands[1])]
+
+def expand_bne(op, operands, pred):
+    check_operands_n(operands, 3)
+    success, imm = parse_imm(operands[1])
+    if success:
+        return mov_imm('r29', imm) + ['{}{} {}, r29, {}'.format(op, pred, operands[0], operands[2])]
+    return ['{}{} {}'.format(op, pred, ', '.join(operands))]
+
+def expand_blt(op, operands, pred):
+    check_operands_n(operands, 3)
+    b, c = ('beq', 'cmple') if op == 'bgt' else \
+           ('beq', 'cmplt') if op == 'bge' else \
+           ('bne', 'cmp' + op[1:])
+    success, imm = parse_imm(operands[1])
+    s = ['{} r29, {}, {}, 0'.format(c, operands[0], operands[1])] if not success else \
+        ['{} r29, {}, r0, {}'.format(c, operands[0], imm)] if check_imm_range(imm, 8) else \
+        mov_imm('r29', imm) + ['{} r29, {}, r29, 0'.format(c, operands[0])]
+    return s + ['{}{} r29, r0, {}'.format(b, pred, operands[2])]
+
+def expand_bfne(op, operands, pred):
+    check_operands_n(operands, 3)
+    b, c = ('beq', 'fcmple') if op == 'bfgt' else \
+           ('beq', 'fcmplt') if op == 'bfge' else \
+           ('bne', 'fcmp' + op[2:])
+    return [
+        '{} r29, {}, {}'.format(c, operands[0], operands[1]),
+        '{}{} r29, r0, {}'.format(b, pred, operands[2])
+    ]
 
 def expand_push(operands):
     check_operands_n(operands, 1)
@@ -397,12 +445,12 @@ def expand_pop(operands):
 def expand_call(operands):
     check_operands_n(operands, 1)
     return [
-        'st rbp, rsp, -1',
+        'st rbp, rsp, -4',
         'sub rsp, rsp, r0, 4',
         'add rbp, rsp, r0, 0',
         'jl r28, {}'.format(operands[0]),
         'add rsp, rbp, r0, 4',
-        'ld rbp, rsp, -1'
+        'ld rbp, rsp, -4'
     ]
 
 def expand_ret(operands):
@@ -422,17 +470,7 @@ def expand_leave(operands):
 
 def expand_halt(operands):
     check_operands_n(operands, 0)
-    return ['beq+ r31, r31, -1']
-
-def expand_branch(op, operands, pred, swap):
-    check_operands_n(operands, 3)
-    pred = '+' if (pred == '+' and not swap) or (pred == '-' and swap) else \
-           '-' if (pred == '-' and not swap) or (pred == '+' and swap) else \
-           ''
-    return [
-        '{} r29, {}, {}'.format(op, operands[swap], operands[1 - swap]),
-        'bne{} r0, r29, {}'.format(pred, operands[2])
-    ]
+    return ['beq+ r31, r31, -4']
 
 macro_table = {
     'nop':      expand_nop,
@@ -440,8 +478,6 @@ macro_table = {
     'and':      expand_and,
     'neg':      expand_neg,
     'not':      expand_not,
-    'cmpgt':    expand_cmpgt,
-    'cmpge':    expand_cmpge,
     'fcmpgt':   expand_fcmpgt,
     'fcmpge':   expand_fcmpge,
     'read':     expand_read,
@@ -453,20 +489,7 @@ macro_table = {
     'ret':      expand_ret,
     'enter':    expand_enter,
     'leave':    expand_leave,
-    'halt':     expand_halt
-}
-
-branch_table = {
-    'blt':  ('cmplt', 0),
-    'ble':  ('cmple', 0),
-    'bgt':  ('cmple', 1),
-    'bge':  ('cmplt', 1),
-    'bfne': ('fcmpne', 0),
-    'bfeq': ('fcmpeq', 0),
-    'bflt': ('fcmplt', 0),
-    'bfle': ('fcmple', 0),
-    'bfgt': ('fcmple', 1),
-    'bfge': ('fcmplt', 1),
+    'halt':     expand_halt,
 }
 
 def expand_macro(mnemonic, operands):
@@ -474,12 +497,21 @@ def expand_macro(mnemonic, operands):
         return macro_table[mnemonic](operands)
     if mnemonic in ['add', 'sub', 'shl', 'shr', 'sar', 'or', 'xor']:
         return expand_alu(mnemonic, operands)
+    if mnemonic in ['cmpne', 'cmpeq', 'cmplt', 'cmple', 'cmpgt', 'cmpge']:
+        return expand_cmp(mnemonic, operands)
     m = re.match(r'(\w+)([+-]?)$', mnemonic)
     if m:
         br_mnemonic, pred = m.groups()
-        if br_mnemonic in branch_table:
-            op, swap = branch_table[br_mnemonic]
-            return expand_branch(op, operands, pred, swap)
+        if br_mnemonic == 'bz':
+            return expand_bz(operands, pred)
+        if br_mnemonic == 'bnz':
+            return expand_bnz(operands, pred)
+        if br_mnemonic in ['bne', 'beq']:
+            return expand_bne(br_mnemonic, operands, pred)
+        if br_mnemonic in ['blt', 'ble', 'bgt', 'bge']:
+            return expand_blt(br_mnemonic, operands, pred)
+        if br_mnemonic in ['bfne', 'bfeq', 'bflt', 'bfle', 'bfgt', 'bfge']:
+            return expand_bfne(br_mnemonic, operands, pred)
     return ['{} {}'.format(mnemonic, ', '.join(operands)).strip()]
 
 
@@ -489,6 +521,7 @@ def expand_macro(mnemonic, operands):
 
 labels = {}
 rev_labels = {}
+library = ''
 
 def add_label(label, i):
     dic = labels.get(label, {})
@@ -517,7 +550,7 @@ def subst(label, cur, rel):
     offset = -cur - 1 if rel else 0x1000
     if filename in labels[label]:
         labels[label][filename][2] = True
-        return str(labels[label][filename][0] + offset)
+        return str(4 * (labels[label][filename][0] + offset))
     else:
         decl = ''
         for key in labels[label]:
@@ -528,7 +561,7 @@ def subst(label, cur, rel):
         if not decl:
             error('label \'{}\' is not declared'.format(label))
         labels[label][decl][2] = True
-        return str(labels[label][decl][0] + offset)
+        return str(4 * (labels[label][decl][0] + offset))
 
 def warn_unused_label(label):
     if not labels[label][filename][2] and not (filename == library and labels[label][filename][1]):
@@ -547,14 +580,18 @@ def show_label(i):
 # parse command line arguments
 argparser = argparse.ArgumentParser(usage='%(prog)s [options] file...')
 argparser.add_argument('inputs', nargs='*', help='input files', metavar='file...')
+argparser.add_argument('-a', action='store_const', const=True, help='output as rs232c send test format')
+argparser.add_argument('-k', action='store_const', const=True, help='output as array of std_logic_vector format')
+argparser.add_argument('-l', help='set library file to <file>', metavar='<file>')
 argparser.add_argument('-o', help='set output file to <file>', metavar='<file>')
 argparser.add_argument('-s', action='store_const', const=True, help='output preprocessed assembly')
-argparser.add_argument('-k', action='store_const', const=True, help='output as array of std_logic_vector format')
-argparser.add_argument('-a', action='store_const', const=True, help='output as rs232c send test format')
 args = argparser.parse_args()
 if args.inputs == []:
     argparser.print_help()
     sys.exit(1)
+if args.l:
+    args.inputs = [args.l] + args.inputs
+    library = re.sub(r'.*[/\\]', '', args.l)
 
 # 0. preprocess
 lines0 = [('br main', '_main', 0)]
@@ -584,7 +621,7 @@ for line, filename, pos in lines1:
     mnemonic, operands = parse(line)
     if mnemonic[-1] == ':':
         if len(operands) > 0:
-            error('invalid syntax')
+            error('label declaration must be followed by new line')
         add_label(line[:-1], i)
     elif mnemonic == '.global':
         check_operands_n(operands, 1)
@@ -601,14 +638,8 @@ for i, (line, filename, pos) in enumerate(lines2):
         check_operands_n(operands, 2, 3)
         operands[-1] = subst(operands[-1], i, True)
     if mnemonic == '__movl':
-        imm = int(subst(operands[1], i, False))
-        if imm >= 0x8000:
-            lines3.extend([
-                ('ldl {}, {}'.format(operands[0], cast_short(imm)), filename, pos),
-                ('ldh {}, {}, {}'.format(operands[0], operands[0], cast_short(imm >> 16)), filename, pos)
-            ])
-        else:
-            lines3.append(('ldl {}, {}'.format(operands[0], imm), filename, pos))
+        lines = mov_imm(operands[0], int(subst(operands[1], i, False)))
+        lines3.extend(map(lambda x: (x, filename, pos), lines))
     else:
         lines3.append(('{} {}'.format(mnemonic, ', '.join(operands)), filename, pos))
 for line, filename, pos in lines1:
@@ -657,3 +688,4 @@ if args.s:
         for i, (line, filename, pos) in enumerate(lines3):
             mnemonic, operands = parse(line)
             f.write('{:7} {:19} {}'.format(mnemonic, ', '.join(operands), show_label(i)).strip() + '\n')
+
