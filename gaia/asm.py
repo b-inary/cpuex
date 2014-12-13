@@ -280,10 +280,8 @@ def expand_nop(operands):
 def mov_imm(dest, imm):
     if check_imm_range(imm, 16):
         return ['ldl {}, {}'.format(dest, imm)]
-    return [
-        'ldl {}, {}'.format(dest, cast_short(imm)),
-        'ldh {0}, {0}, {1}'.format(dest, cast_short(imm >> 16))
-    ]
+    return ['ldl {}, {}'.format(dest, cast_short(imm)),
+            'ldh {0}, {0}, {1}'.format(dest, cast_short(imm >> 16))]
 
 def expand_mov(operands):
     check_operands_n(operands, 2)
@@ -311,6 +309,7 @@ def expand_mov(operands):
         return ['__movl {}'.format(', '.join(operands))]
     error('invalid syntax')
 
+# and, sub, shl, shr, sar, or, xor
 def expand_alu(op, operands):
     if (len(operands) == 4):
         return ['{} {}'.format(op, ', '.join(operands))]
@@ -345,6 +344,21 @@ def expand_not(operands):
     check_operands_n(operands, 2)
     return ['xor {}, {}, r0, -1'.format(operands[0], operands[1])]
 
+def expand_shift(operands):
+    check_operands_n(operands, 3)
+    success, imm = parse_imm(operands[2])
+    if success:
+        if imm < 0:
+            return ['shr {}, {}, r0, {}'.format(operands[0], operands[1], -imm)]
+        return ['shl {}, {}, r0, {}'.format(operands[0], operands[1], imm)]
+    return ['cmplt r29, {}, r0, 0'.format(operands[2]),
+            'bne r29, r0, 8',
+            'shl {}, {}, {}, 0'.format(operands[0], operands[1], operands[2]),
+            'jl r29, 8',
+            'sub r29, r0, {}, 0'.format(operands[2]),
+            'shr {}, {}, r29, 0'.format(operands[0], operands[1])]
+
+# cmpne, cmpeq, cmplt, cmple, cmpgt, cmple
 def expand_cmp(op, operands):
     if (len(operands) == 4):
         return ['{} {}'.format(op, ', '.join(operands))]
@@ -376,19 +390,15 @@ def expand_fcmpge(operands):
 
 def expand_read(operands):
     check_operands_n(operands, 1)
-    return [
-        'ld r29, r0, 0x3000',
-        'beq r29, r0, -8',
-        'ld {}, r0, 0x3004'.format(operands[0])
-    ]
+    return ['ld r29, r0, 0x3000',
+            'beq r29, r0, -8',
+            'ld {}, r0, 0x3004'.format(operands[0])]
 
 def expand_write(operands):
     check_operands_n(operands, 1)
-    return [
-        'ld r29, r0, 0x3008',
-        'beq r29, r0, -8',
-        'st {}, r0, 0x300c'.format(operands[0])
-    ]
+    return ['ld r29, r0, 0x3008',
+            'beq r29, r0, -8',
+            'st {}, r0, 0x300c'.format(operands[0])]
 
 def expand_br(operands):
     check_operands_n(operands, 1)
@@ -400,6 +410,7 @@ def expand_bz(operands, pred):
 def expand_bnz(operands, pred):
     return ['bne{} {}, r0, {}'.format(pred, operands[0], operands[1])]
 
+# bne, beq
 def expand_bne(op, operands, pred):
     check_operands_n(operands, 3)
     success, imm = parse_imm(operands[1])
@@ -407,6 +418,7 @@ def expand_bne(op, operands, pred):
         return mov_imm('r29', imm) + ['{}{} {}, r29, {}'.format(op, pred, operands[0], operands[2])]
     return ['{}{} {}'.format(op, pred, ', '.join(operands))]
 
+# blt, ble, bgt, bge
 def expand_blt(op, operands, pred):
     check_operands_n(operands, 3)
     b, c = ('beq', 'cmple') if op == 'bgt' else \
@@ -418,40 +430,33 @@ def expand_blt(op, operands, pred):
         mov_imm('r29', imm) + ['{} r29, {}, r29, 0'.format(c, operands[0])]
     return s + ['{}{} r29, r0, {}'.format(b, pred, operands[2])]
 
+# bfne, bfeq, bflt, bfle, bfgt, bfge
 def expand_bfne(op, operands, pred):
     check_operands_n(operands, 3)
     b, c = ('beq', 'fcmple') if op == 'bfgt' else \
            ('beq', 'fcmplt') if op == 'bfge' else \
            ('bne', 'fcmp' + op[2:])
-    return [
-        '{} r29, {}, {}'.format(c, operands[0], operands[1]),
-        '{}{} r29, r0, {}'.format(b, pred, operands[2])
-    ]
+    return ['{} r29, {}, {}'.format(c, operands[0], operands[1]),
+            '{}{} r29, r0, {}'.format(b, pred, operands[2])]
 
 def expand_push(operands):
     check_operands_n(operands, 1)
-    return [
-        'sub rsp, rsp, r0, 4',
-        'st {}, rsp, 0'.format(operands[0])
-    ]
+    return ['sub rsp, rsp, r0, 4',
+            'st {}, rsp, 0'.format(operands[0])]
 
 def expand_pop(operands):
     check_operands_n(operands, 1)
-    return [
-        'ld {}, rsp, 0'.format(operands[0]),
-        'add rsp, rsp, r0, 4'
-    ]
+    return ['ld {}, rsp, 0'.format(operands[0]),
+            'add rsp, rsp, r0, 4']
 
 def expand_call(operands):
     check_operands_n(operands, 1)
-    return [
-        'st rbp, rsp, -4',
-        'sub rsp, rsp, r0, 4',
-        'add rbp, rsp, r0, 0',
-        'jl r28, {}'.format(operands[0]),
-        'add rsp, rbp, r0, 4',
-        'ld rbp, rsp, -4'
-    ]
+    return ['st rbp, rsp, -4',
+            'sub rsp, rsp, r0, 4',
+            'add rbp, rsp, r0, 0',
+            'jl r28, {}'.format(operands[0]),
+            'add rsp, rbp, r0, 4',
+            'ld rbp, rsp, -4']
 
 def expand_ret(operands):
     check_operands_n(operands, 0)
@@ -478,6 +483,7 @@ macro_table = {
     'and':      expand_and,
     'neg':      expand_neg,
     'not':      expand_not,
+    'shift':    expand_shift,
     'fcmpgt':   expand_fcmpgt,
     'fcmpge':   expand_fcmpge,
     'read':     expand_read,
@@ -522,6 +528,7 @@ def expand_macro(mnemonic, operands):
 labels = {}
 rev_labels = {}
 library = ''
+entry_addr = 0x4000
 
 def add_label(label, i):
     dic = labels.get(label, {})
@@ -547,10 +554,10 @@ def subst(label, cur, rel):
         return label
     if label not in labels:
         error('label \'{}\' is not declared'.format(label))
-    offset = -cur - 1 if rel else 0x1000
+    offset = -4 * (cur + 1) if rel else entry_addr
     if filename in labels[label]:
         labels[label][filename][2] = True
-        return str(4 * (labels[label][filename][0] + offset))
+        return str(4 * labels[label][filename][0] + offset)
     else:
         decl = ''
         for key in labels[label]:
@@ -561,7 +568,7 @@ def subst(label, cur, rel):
         if not decl:
             error('label \'{}\' is not declared'.format(label))
         labels[label][decl][2] = True
-        return str(4 * (labels[label][decl][0] + offset))
+        return str(4 * labels[label][decl][0] + offset)
 
 def warn_unused_label(label):
     if not labels[label][filename][2] and not (filename == library and labels[label][filename][1]):
@@ -580,15 +587,22 @@ def show_label(i):
 # parse command line arguments
 argparser = argparse.ArgumentParser(usage='%(prog)s [options] file...')
 argparser.add_argument('inputs', nargs='*', help='input files', metavar='file...')
-argparser.add_argument('-a', action='store_const', const=True, help='output as rs232c send test format')
-argparser.add_argument('-k', action='store_const', const=True, help='output as array of std_logic_vector format')
+argparser.add_argument('-a', action='store_true', help='output as rs232c send test format')
+argparser.add_argument('-e', help='set entry address', metavar='<integer>')
+argparser.add_argument('-k', action='store_true', help='output as array of std_logic_vector format')
 argparser.add_argument('-l', help='set library file to <file>', metavar='<file>')
 argparser.add_argument('-o', help='set output file to <file>', metavar='<file>')
-argparser.add_argument('-s', action='store_const', const=True, help='output preprocessed assembly')
+argparser.add_argument('-s', action='store_true', help='output preprocessed assembly')
 args = argparser.parse_args()
 if args.inputs == []:
-    argparser.print_help()
+    argparser.print_help(sys.stderr)
     sys.exit(1)
+if args.e:
+    success, entry_addr = parse_imm(args.e)
+    if not success:
+        argparser.print_usage(sys.stderr)
+        print >> sys.stderr, 'error: argument -e: expected integer'
+        sys.exit(1)
 if args.l:
     args.inputs = [args.l] + args.inputs
     library = re.sub(r'.*[/\\]', '', args.l)

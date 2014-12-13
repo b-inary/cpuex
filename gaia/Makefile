@@ -15,6 +15,5 @@ PHONY: clean
 clean:
 	rm -f $(TARGETS)
 	rm -rf _build/
-	mv llvmlib.ll tmp
-	rm -f *.ll *.s *.out
-	mv tmp llvmlib.ll
+	rm -f *.out
+
