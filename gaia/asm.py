@@ -13,7 +13,7 @@ pos = 0
 
 def error(msg):
     print >> sys.stderr, '{}:{}: error:'.format(filename, pos), msg
-    print >> sys.stderr, '    ' + srcs[filename][pos]
+    print >> sys.stderr, '  ' + srcs[filename][pos]
     sys.exit(1)
 
 
@@ -75,13 +75,13 @@ def parse_memaccess(operand):
 def check_operands_n(operands, n, m=-1):
     l = len(operands)
     if l < n:
-        error('too few operands: {} expected ({} given)'.format(n, l))
+        error('expected {} operands, but {} given'.format(n, l))
     if l > max(n, m):
-        error('too many operands: {} expected ({} given)'.format(max(n, m), l))
+        error('expected {} operands, but {} given'.format(max(n, m), l))
 
 def regnum(reg):
     if reg not in regs:
-        error('invalid register name: ' + reg)
+        error('expected register: ' + reg)
     return regs[reg]
 
 def code_i(rx, ra, rb, imm, tag):
@@ -90,7 +90,7 @@ def code_i(rx, ra, rb, imm, tag):
     b = regnum(rb)
     success, i = parse_imm(imm)
     if not success:
-        error(imm + ' is not an immediate value')
+        error('expected integer literal: ' + imm)
     if not check_imm_range(i, 8):
         error('immediate value ' + imm + ' exceeds valid range')
     c1 = x >> 1
@@ -114,10 +114,10 @@ def code_m(op, rx, ra, pred, disp, disp_mode):
     a = regnum(ra)
     success, d = parse_imm(disp)
     if not success:
-        error('invalid syntax: expected displacement')
+        error('expected displacement: ' + disp)
     if disp_mode:
         if d & 3 != 0:
-            error('displacement ' + disp + ' is not multiple of 4')
+            error('displacement ' + disp + ' is not a multiple of 4')
         d >>= 2
     if not check_imm_range(d, 16):
         error('displacement ' + disp + ' exceeds valid range')
@@ -173,6 +173,20 @@ def on_other2(operands, op, pred, disp_mode):
 def on_other3(operands, op, pred, disp_mode):
     check_operands_n(operands, 3)
     return code_m(op, operands[0], operands[1], pred, operands[2], disp_mode)
+
+def on_dot_int(operand):
+    success, imm = parse_imm(operand)
+    if not success:
+        error('expected integer literal: ' + operand)
+    if not -0x80000000 <= imm <= 0xffffffff:
+        error('immediate value ' + operand + ' exceeds valid range')
+    return chr(imm >> 24 & 255) + chr(imm >> 16 & 255) + chr(imm >> 8 & 255) + chr(imm & 255)
+
+def on_dot_float(operand):
+    success, imm = parse_float(operand)
+    if not success:
+        error('expected floating point literal: ' + operand)
+    return on_dot_int(str(float_to_bit(imm)))
 
 alu3_table = {
     'fcmpne':   28,
@@ -266,6 +280,10 @@ def code(mnemonic, operands):
         return on_other2(operands, other2_table[mnemonic], pred, disp_mode)
     if mnemonic in other3_table:
         return on_other3(operands, other3_table[mnemonic], pred, disp_mode)
+    if mnemonic == '.int':
+        return on_dot_int(operands[0])
+    if mnemonic == '.float':
+        return on_dot_float(operands[0])
     error('unknown mnemonic: ' + mnemonic)
 
 
@@ -311,9 +329,9 @@ def expand_mov(operands):
 
 # and, sub, shl, shr, sar, or, xor
 def expand_alu(op, operands):
+    check_operands_n(operands, 3, 4)
     if (len(operands) == 4):
         return ['{} {}'.format(op, ', '.join(operands))]
-    check_operands_n(operands, 3)
     if is_reg(operands[2]):
         return ['{} {}, 0'.format(op, ', '.join(operands))]
     success, imm = parse_imm(operands[2])
@@ -324,9 +342,9 @@ def expand_alu(op, operands):
     error('invalid syntax')
 
 def expand_and(operands):
+    check_operands_n(operands, 3, 4)
     if (len(operands) == 4):
         return ['and {}'.format(', '.join(operands))]
-    check_operands_n(operands, 3)
     if is_reg(operands[2]):
         return ['and {}, -1'.format(', '.join(operands))]
     success, imm = parse_imm(operands[2])
@@ -360,9 +378,9 @@ def expand_shift(operands):
 
 # cmpne, cmpeq, cmplt, cmple, cmpgt, cmple
 def expand_cmp(op, operands):
+    check_operands_n(operands, 3, 4)
     if (len(operands) == 4):
         return ['{} {}'.format(op, ', '.join(operands))]
-    check_operands_n(operands, 3)
     if is_reg(operands[2]):
         if op == 'cmpgt':
             return ['cmplt {}, {}, {}, 0'.format(operands[0], operands[2], operands[1])]
@@ -405,9 +423,11 @@ def expand_br(operands):
     return ['jl r29, {}'.format(operands[0])]
 
 def expand_bz(operands, pred):
+    check_operands_n(operands, 2)
     return ['beq{} {}, r0, {}'.format(pred, operands[0], operands[1])]
 
 def expand_bnz(operands, pred):
+    check_operands_n(operands, 2)
     return ['bne{} {}, r0, {}'.format(pred, operands[0], operands[1])]
 
 # bne, beq
@@ -424,11 +444,7 @@ def expand_blt(op, operands, pred):
     b, c = ('beq', 'cmple') if op == 'bgt' else \
            ('beq', 'cmplt') if op == 'bge' else \
            ('bne', 'cmp' + op[1:])
-    success, imm = parse_imm(operands[1])
-    s = ['{} r29, {}, {}, 0'.format(c, operands[0], operands[1])] if not success else \
-        ['{} r29, {}, r0, {}'.format(c, operands[0], imm)] if check_imm_range(imm, 8) else \
-        mov_imm('r29', imm) + ['{} r29, {}, r29, 0'.format(c, operands[0])]
-    return s + ['{}{} r29, r0, {}'.format(b, pred, operands[2])]
+    return expand_cmp(c, ['r29'] + operands[:2]) + ['{}{} r29, r0, {}'.format(b, pred, operands[2])]
 
 # bfne, bfeq, bflt, bfle, bfgt, bfge
 def expand_bfne(op, operands, pred):
@@ -467,7 +483,7 @@ def expand_enter(operands):
     success, imm = parse_imm(operands[0])
     if success:
         return expand_alu('sub', ['rsp', 'rsp', str(imm * 4 + 4)]) + ['st r28, rsp, 0']
-    error('invalid syntax')
+    error('expected integer literal: ' + operands[0])
 
 def expand_leave(operands):
     check_operands_n(operands, 0)
@@ -476,6 +492,24 @@ def expand_leave(operands):
 def expand_halt(operands):
     check_operands_n(operands, 0)
     return ['beq+ r31, r31, -4']
+
+def expand_dot_int(operands):
+    check_operands_n(operands, 1, 2)
+    if len(operands) == 1:
+        return ['.int ' + operands[0]]
+    success, imm = parse_imm(operands[1])
+    if not success:
+        error('expected integer literal: ' + operands[1])
+    return ['.int ' + operands[0]] * imm
+
+def expand_dot_float(operands):
+    check_operands_n(operands, 1, 2)
+    if len(operands) == 1:
+        return ['.float ' + operands[0]]
+    success, imm = parse_imm(operands[1])
+    if not success:
+        error('expected integer literal: ' + operands[1])
+    return ['.float ' + operands[0]] * imm
 
 macro_table = {
     'nop':      expand_nop,
@@ -496,6 +530,8 @@ macro_table = {
     'enter':    expand_enter,
     'leave':    expand_leave,
     'halt':     expand_halt,
+    '.int':     expand_dot_int,
+    '.float':   expand_dot_float,
 }
 
 def expand_macro(mnemonic, operands):
@@ -588,7 +624,7 @@ def show_label(i):
 argparser = argparse.ArgumentParser(usage='%(prog)s [options] file...')
 argparser.add_argument('inputs', nargs='*', help='input files', metavar='file...')
 argparser.add_argument('-a', action='store_true', help='output as rs232c send test format')
-argparser.add_argument('-e', help='set entry address', metavar='<integer>')
+argparser.add_argument('-e', help='set entry point address', metavar='<integer>')
 argparser.add_argument('-k', action='store_true', help='output as array of std_logic_vector format')
 argparser.add_argument('-l', help='set library file to <file>', metavar='<file>')
 argparser.add_argument('-o', help='set output file to <file>', metavar='<file>')
@@ -601,7 +637,11 @@ if args.e:
     success, entry_addr = parse_imm(args.e)
     if not success:
         argparser.print_usage(sys.stderr)
-        print >> sys.stderr, 'error: argument -e: expected integer'
+        print >> sys.stderr, 'error: argument -e: expected integer:', args.e
+        sys.exit(1)
+    if entry_addr & 3 != 0:
+        argparser.print_usage(sys.stderr)
+        print >> sys.stderr, 'error: argument -e: entry address must be a multiple of 4'
         sys.exit(1)
 if args.l:
     args.inputs = [args.l] + args.inputs

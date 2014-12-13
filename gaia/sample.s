@@ -104,3 +104,9 @@ main:
     leave
     halt
 
+    # directives
+    .int    42
+    .int    0xdeadbeef, 3
+    .float  1.2e34
+    .float  -3.141592, 3
+
