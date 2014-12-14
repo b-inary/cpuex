@@ -298,6 +298,8 @@ def expand_nop(operands):
 def mov_imm(dest, imm):
     if check_imm_range(imm, 16):
         return ['ldl {}, {}'.format(dest, imm)]
+    if imm & 0xffff == 0:
+        return ['ldh {}, r0, {}'.format(dest, cast_short(imm >> 16))]
     return ['ldl {}, {}'.format(dest, cast_short(imm)),
             'ldh {0}, {0}, {1}'.format(dest, cast_short(imm >> 16))]
 
@@ -327,7 +329,7 @@ def expand_mov(operands):
         return ['__movl {}'.format(', '.join(operands))]
     error('invalid syntax')
 
-# and, sub, shl, shr, sar, or, xor
+# and, sub, shl, shr, sar, or, xor, cmpne, cmpeq, cmplt, cmple
 def expand_alu(op, operands):
     check_operands_n(operands, 3, 4)
     if (len(operands) == 4):
@@ -363,39 +365,36 @@ def expand_not(operands):
     return ['xor {}, {}, r0, -1'.format(operands[0], operands[1])]
 
 def expand_shift(operands):
-    check_operands_n(operands, 3)
+    check_operands_n(operands, 3, 4)
     success, imm = parse_imm(operands[2])
-    if success:
+    if success and len(operands) == 3:
         if imm < 0:
             return ['shr {}, {}, r0, {}'.format(operands[0], operands[1], -imm)]
         return ['shl {}, {}, r0, {}'.format(operands[0], operands[1], imm)]
-    return ['cmplt r29, {}, r0, 0'.format(operands[2]),
-            'bne r29, r0, 8',
-            'shl {}, {}, {}, 0'.format(operands[0], operands[1], operands[2]),
+    imm = '0' if len(operands) == 3 else operands[3]
+    return ['cmple r29, r0, {}, {}'.format(operands[2], imm),
+            'beq r29, r0, 8',
+            'shl {}, {}, {}, {}'.format(operands[0], operands[1], operands[2], imm),
             'jl r29, 8',
-            'sub r29, r0, {}, 0'.format(operands[2]),
+            'sub r29, r0, {}, {}'.format(operands[2], imm),
             'shr {}, {}, r29, 0'.format(operands[0], operands[1])]
 
-# cmpne, cmpeq, cmplt, cmple, cmpgt, cmple
-def expand_cmp(op, operands):
-    check_operands_n(operands, 3, 4)
-    if (len(operands) == 4):
-        return ['{} {}'.format(op, ', '.join(operands))]
+def expand_cmpgt(operands):
+    check_operands_n(operands, 3)
     if is_reg(operands[2]):
-        if op == 'cmpgt':
-            return ['cmplt {}, {}, {}, 0'.format(operands[0], operands[2], operands[1])]
-        if op == 'cmpge':
-            return ['cmple {}, {}, {}, 0'.format(operands[0], operands[2], operands[1])]
-        return ['{} {}, 0'.format(op, ', '.join(operands))]
+        return ['cmplt {}, {}, {}, 0'.format(operands[0], operands[2], operands[1])]
     success, imm = parse_imm(operands[2])
     if success:
-        if op == 'cmpgt':
-            return mov_imm('r29', imm) + ['cmplt {}, r29, {}, 0'.format(operands[0], operands[1])]
-        if op == 'cmpge':
-            return mov_imm('r29', imm) + ['cmple {}, r29, {}, 0'.format(operands[0], operands[1])]
-        if check_imm_range(imm, 8):
-            return ['{} {}, {}, r0, {}'.format(op, operands[0], operands[1], imm)]
-        return mov_imm('r29', imm) + ['{} {}, {}, r29, 0'.format(op, operands[0], operands[1])]
+        return mov_imm('r29', imm) + ['cmplt {}, r29, {}, 0'.format(operands[0], operands[1])]
+    error('invalid syntax')
+
+def expand_cmpge(operands):
+    check_operands_n(operands, 3)
+    if is_reg(operands[2]):
+        return ['cmple {}, {}, {}, 0'.format(operands[0], operands[2], operands[1])]
+    success, imm = parse_imm(operands[2])
+    if success:
+        return mov_imm('r29', imm) + ['cmple {}, r29, {}, 0'.format(operands[0], operands[1])]
     error('invalid syntax')
 
 def expand_fcmpgt(operands):
@@ -444,7 +443,7 @@ def expand_blt(op, operands, pred):
     b, c = ('beq', 'cmple') if op == 'bgt' else \
            ('beq', 'cmplt') if op == 'bge' else \
            ('bne', 'cmp' + op[1:])
-    return expand_cmp(c, ['r29'] + operands[:2]) + ['{}{} r29, r0, {}'.format(b, pred, operands[2])]
+    return expand_alu(c, ['r29'] + operands[:2]) + ['{}{} r29, r0, {}'.format(b, pred, operands[2])]
 
 # bfne, bfeq, bflt, bfle, bfgt, bfge
 def expand_bfne(op, operands, pred):
@@ -518,6 +517,8 @@ macro_table = {
     'neg':      expand_neg,
     'not':      expand_not,
     'shift':    expand_shift,
+    'cmpgt':    expand_cmpgt,
+    'cmpge':    expand_cmpge,
     'fcmpgt':   expand_fcmpgt,
     'fcmpge':   expand_fcmpge,
     'read':     expand_read,
@@ -537,10 +538,8 @@ macro_table = {
 def expand_macro(mnemonic, operands):
     if mnemonic in macro_table:
         return macro_table[mnemonic](operands)
-    if mnemonic in ['add', 'sub', 'shl', 'shr', 'sar', 'or', 'xor']:
+    if mnemonic in ['add', 'sub', 'shl', 'shr', 'sar', 'or', 'xor', 'cmpne', 'cmpeq', 'cmplt', 'cmple']:
         return expand_alu(mnemonic, operands)
-    if mnemonic in ['cmpne', 'cmpeq', 'cmplt', 'cmple', 'cmpgt', 'cmpge']:
-        return expand_cmp(mnemonic, operands)
     m = re.match(r'(\w+)([+-]?)$', mnemonic)
     if m:
         br_mnemonic, pred = m.groups()
