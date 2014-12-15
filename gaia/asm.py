@@ -563,7 +563,7 @@ def expand_macro(mnemonic, operands):
 labels = {}
 rev_labels = {}
 library = ''
-entry_addr = 0x4000
+entry_point = 0x4000
 
 def add_label(label, i):
     dic = labels.get(label, {})
@@ -589,7 +589,7 @@ def subst(label, cur, rel):
         return label
     if label not in labels:
         error('label \'{}\' is not declared'.format(label))
-    offset = -4 * (cur + 1) if rel else entry_addr
+    offset = -4 * (cur + 1) if rel else entry_point
     if filename in labels[label]:
         labels[label][filename][2] = True
         return str(4 * labels[label][filename][0] + offset)
@@ -633,12 +633,12 @@ if args.inputs == []:
     argparser.print_help(sys.stderr)
     sys.exit(1)
 if args.e:
-    success, entry_addr = parse_imm(args.e)
+    success, entry_point = parse_imm(args.e)
     if not success:
         argparser.print_usage(sys.stderr)
         print >> sys.stderr, 'error: argument -e: expected integer:', args.e
         sys.exit(1)
-    if entry_addr & 3 != 0:
+    if entry_point & 3 != 0:
         argparser.print_usage(sys.stderr)
         print >> sys.stderr, 'error: argument -e: entry address must be a multiple of 4'
         sys.exit(1)
@@ -740,5 +740,10 @@ if args.s:
     with open(args.o + '.s', 'w') as f:
         for i, (line, filename, pos) in enumerate(lines3):
             mnemonic, operands = parse(line)
-            f.write('{:7} {:19} {}'.format(mnemonic, ', '.join(operands), show_label(i)).strip() + '\n')
+            f.write('0x{:06x}    {:7} {:19} {}'.format(
+                entry_point + 4 * i,
+                mnemonic,
+                ', '.join(operands),
+                show_label(i)).strip() + '\n'
+            )
 
