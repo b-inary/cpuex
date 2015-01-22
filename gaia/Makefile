@@ -1,23 +1,22 @@
 
-FRONT = urns-front
-SIM = sim
-TARGETS = $(FRONT) $(SIM)
+TARGETS = bin/urns-front bin/sim
 
 FRONTFLAGS = -use-menhir
 FRONTDIR = frontend
 
 all: $(TARGETS)
 
-$(FRONT): $(FRONTDIR)
+bin/urns-front: $(FRONTDIR)
 	ocamlbuild $(FRONTDIR)/main.native -r -lib str -no-links $(FRONTFLAGS)
 	cp _build/$(FRONTDIR)/main.native $@
 
-$(SIM): gaiasim.c
-	gcc gaiasim.c -o $@ -Wall -Wextra -O2 -std=c99 -lm
+bin/sim: software/
+	git submodule update --init
+	$(MAKE) -C software/
+	mv software/sim bin/sim
 
 PHONY: clean
 clean:
-	rm -f $(TARGETS)
+	rm -f $(TARGETS) *.out *.ll *.s
 	rm -rf _build/
-	rm -f *.out
 

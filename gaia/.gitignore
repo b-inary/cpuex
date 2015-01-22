@@ -1,7 +1,5 @@
-urns-front
-sim
+bin/
 _build/
 *.ll
 *.s
 *.out
-test.*

@@ -14,7 +14,7 @@ let parse lexbuf =
     | Failure msg -> error msg
 
 let () =
-  let libname = "uranuslib.ml" in
+  let libname = "lib/urnslib.ml" in
   let libpath = Filename.concat (Filename.dirname Sys.argv.(0)) libname in
   let inputs = ref [] in
   let outfile = ref "" in
