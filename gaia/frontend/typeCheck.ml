@@ -129,6 +129,12 @@ let rec infer_global env expr =
   try match expr with
       Let (name, e1, e2) ->
         let ty = infer env e1 in
+        begin match e1 with
+          | Tuple _ | MakeAry _ -> ()
+          | _ ->
+              if not (ty = TUnit || name = "_") then
+                error expr "invalid global variable definition"
+        end;
         let name' = add_global name in
         infer_global (M.add name' ty env) e2
     | LetFun (name, args, e1, e2) ->
@@ -142,10 +148,7 @@ let rec infer_global env expr =
         unify (TFun (retty, argsty)) ty;
         infer_global env' e2
     | LetTpl (names, e1, e2) ->
-        let ts = List.map (fun _ -> new_tyvar ()) names in
-        unify (TTuple ts) (infer env e1);
-        let names' = List.map add_global names in
-        infer_global (M.add_list names' ts env) e2
+        error expr "do not support global tuple binding"
     | Seq (e1, e2) ->
         unify TUnit (infer env e1);
         infer_global env e2

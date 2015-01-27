@@ -29,6 +29,8 @@ let add_label l =
   add_line_noindent "";
   add_line_noindent "; <label>:%s" (String.sub id 1 (String.length id - 1))
 
+let global_buf = ref []
+
 
 let atos = function
     Bool b -> string_of_bool b
@@ -55,18 +57,41 @@ let args_to_str args =
   let args' = List.filter (fun arg -> snd arg <> TUnit) args in
   String.concat ", " (List.map (fun (a, t) -> ttos t ^ " " ^ atos a) args')
 
+let init_array ret a1 a2 t =
+  let l0 = !current_label in
+  let l1, l2 = new_label (), new_label () in
+  let tmp = new_ident () in
+  add_line "%s = icmp sgt i32 %s, 0" tmp (atos a1);
+  add_line "br i1 %s, label %s, label %s" tmp l1 l2;
+  add_label l1;
+  let tmp2 = new_ident () in
+  let tmp3 = new_ident () in
+  let tmp4 = new_ident () in
+  let tmp5 = new_ident () in
+  add_line "%s = phi i32 [0, %s], [%s, %s]" tmp2 l0 tmp4 l1;
+  add_line "%s = getelementptr %s* %s, i32 %s" tmp3 (ttos t) ret tmp2;
+  add_line "store %s %s, %s* %s" (ttos t) (atos a2) (ttos t) tmp3;
+  add_line "%s = add i32 %s, 1" tmp4 tmp2;
+  add_line "%s = icmp slt i32 %s, %s" tmp5 tmp4 (atos a1);
+  add_line "br i1 %s, label %s, label %s" tmp5 l1 l2;
+  add_label l2
 
 let rec var env name =
   let (atom, ty) = M.find name env in
   match atom with
       Var name when name.[0] = '@' ->
-      begin match ty with
-          TFun _ -> failwith "function is not a first-class object"
-        | _ ->
-            let ret = new_ident () in
-            add_line "%s = load %s* %s" ret (ttos ty) name;
-            (Var ret, ty)
-      end
+        begin match ty with
+            TFun _ -> failwith "function is not a first-class object"
+          | TArray t ->
+              let sz = snd (List.assoc name !global_buf) in
+              if sz = 0 then (Var "null", ty) else begin
+                let ret = new_ident () in
+                add_line "%s = bitcast [%d x %s]* %s to %s*" ret sz (ttos t) name (ttos t);
+                (Var ret, ty)
+              end
+          | _ ->
+              (Var name, ty)
+        end
     | _ -> (atom, ty)
 
 and unop env ty expr fmt =
@@ -110,7 +135,7 @@ and app env func args =
   end
 
 and tuple env exprs =
-  let elems = List.map (insert_let env) exprs in
+  let elems = List.filter (compose ((<>) TUnit) snd) (List.map (insert_let env) exprs) in
   let ty = TTuple (snd (List.split elems)) in
   let tmp = new_ident () in
   let ret = new_ident () in
@@ -131,31 +156,17 @@ and create_array env expr1 expr2 =
       Int i -> Int (i * 8)
     | Var v ->
         let ret = new_ident () in
-        add_line "%s = mul i32 %s, 8" ret v;
+        add_line "%s = shl i32 %s, 3" ret v;
         Var ret
     | _ -> failwith "create_array: something wrong" in
-  let tmp = new_ident () in
-  let ret = new_ident () in
-  let tmp2 = new_ident () in
-  let l0 = !current_label in
-  let l1, l2 = new_label (), new_label () in
-  add_line "%s = call noalias i8* @malloc(i32 %s)" tmp (atos sz);
-  add_line "%s = bitcast i8* %s to %s" ret tmp (ttos ty);
-  add_line "%s = icmp sgt i32 %s, 0" tmp2 (atos atom1);
-  add_line "br i1 %s, label %s, label %s" tmp2 l1 l2;
-  add_label l1;
-  let tmp3 = new_ident () in
-  let tmp4 = new_ident () in
-  let tmp5 = new_ident () in
-  let tmp6 = new_ident () in
-  add_line "%s = phi i32 [0, %s], [%s, %s]" tmp3 l0 tmp5 l1;
-  add_line "%s = getelementptr %s %s, i32 %s" tmp4 (ttos ty) ret tmp3;
-  add_line "store %s %s, %s %s" (ttos t) (atos atom2) (ttos ty) tmp4;
-  add_line "%s = add i32 %s, 1" tmp5 tmp3;
-  add_line "%s = icmp slt i32 %s, %s" tmp6 tmp5 (atos atom1);
-  add_line "br i1 %s, label %s, label %s" tmp6 l1 l2;
-  add_label l2;
-  (Var ret, ty)
+  if sz = Int 0 then (Var "null", ty) else begin
+    let tmp = new_ident () in
+    let ret = new_ident () in
+    add_line "%s = call noalias i8* @malloc(i32 %s)" tmp (atos sz);
+    add_line "%s = bitcast i8* %s to %s" ret tmp (ttos ty);
+    init_array ret atom1 atom2 t;
+    (Var ret, ty)
+  end
 
 and get env expr1 expr2 =
   let (atom1, ty) =
@@ -291,7 +302,6 @@ and insert_let env expr =
 let main_buf = ref []
 let main_id = ref 0
 let main_cur = ref "%0"
-let global_buf = ref []
 let global_id = ref (-1)
 let reset () =
   output_buf := []; id_counter := 0; current_label := "%0"
@@ -300,14 +310,21 @@ let push_main () =
 let pop_main () =
   output_buf := !main_buf; id_counter := !main_id; current_label := !main_cur
 
-let add_global name ty =
+let add_global name ty sz =
   incr global_id;
   let name' = sprintf "@%s.%d" name !global_id in
-  if ty <> TUnit then begin
-    let s = sprintf "%s = private global %s undef" name' (ttos ty) in
-    global_buf := s :: !global_buf
-  end;
+  if ty <> TUnit then global_buf := (name', (ty, sz)) :: !global_buf;
   name'
+
+let global_str (name, (ty, sz)) =
+  match ty with
+      TTuple l ->
+        let s = ttos ty in
+        let t = String.sub s 0 (String.length s - 1) in
+        sprintf "%s = private global %s undef" name t
+    | TArray t ->
+        sprintf "%s = private global [%d x %s] undef" name sz (ttos t)
+    | _ -> failwith "global_str: something wrong"
 
 let add_func name =
   incr global_id;
@@ -331,11 +348,34 @@ let emit_buf oc buf =
 
 let emit oc globenv ast inlineall =
   let rec go env = function
-      Let (name, e1, e2) ->
+      Let (name, Tuple l, e2) ->
+        let elems = List.filter (compose ((<>) TUnit) snd) (List.map (insert_let env) l) in
+        let ty = TTuple (snd (List.split elems)) in
+        let name' = add_global name ty 0 in
+        let store i (a, t) =
+          let tmp = new_ident () in
+          add_line "%s = getelementptr %s %s, i32 0, i32 %d" tmp (ttos ty) name' i;
+          add_line "store %s %s, %s* %s" (ttos t) (atos a) (ttos t) tmp in
+        List.iteri store elems;
+        go (M.add name (Var name', ty) env) e2
+    | Let (name, MakeAry (e1, e2), e3) ->
+        let a1 = fst (insert_let env e1) in
+        let (a2, t) = insert_let env e2 in
+        let ty = TArray t in
+        let sz = match a1 with
+            Int i -> i
+          | Var v -> failwith "create_array (global): size must be constant"
+          | _ -> failwith "create_array (global): something wrong" in
+        let name' = add_global name ty sz in
+        if sz > 0 then begin
+          let tmp = new_ident () in
+          add_line "%s = bitcast [%d x %s]* %s to %s" tmp sz (ttos t) name' (ttos ty);
+          init_array tmp a1 a2 t
+        end;
+        go (M.add name (Var name', ty) env) e3
+    | Let (name, e1, e2) ->
         let (atom, ty) = insert_let env e1 in
-        let name' = add_global name ty in
-        if ty <> TUnit then
-          add_line "store %s %s, %s* %s" (ttos ty) (atos atom) (ttos ty) name';
+        let name' = add_global name ty 0 in
         go (M.add name (Var name', ty) env) e2
     | LetFun (name, args, e1, e2) ->
         push_main ();
@@ -356,18 +396,6 @@ let emit oc globenv ast inlineall =
         emit_buf oc !output_buf;
         pop_main ();
         go env' e2
-    | LetTpl (names, e1, e2) ->
-        let (atom, ty) = insert_let env e1 in
-        let tys = match ty with
-            TTuple t -> t
-          | _ -> failwith "emit: lettuple: something wromg" in
-        let names' = List.map2 add_global names tys in
-        let rets = let_tuple atom ty tys in
-        let store (a, t) n =
-          add_line "store %s %s, %s* %s" (ttos t) (atos a) (ttos t) n in
-        List.iter2 store rets names';
-        let map = List.combine (List.map (fun n -> Var n) names') tys in
-        go (M.add_list names map env) e2
     | Seq (e1, e2) ->
         ignore (insert_let env e1);
         go env e2
@@ -380,7 +408,7 @@ let emit oc globenv ast inlineall =
   add_line "ret i32 0";
   add_line_noindent "}";
   emit_buf oc !output_buf;
-  emit_buf oc !global_buf;
+  emit_buf oc (List.map global_str !global_buf);
   output_buf := [];
   add_line_noindent "declare i32 @read() nounwind";
   add_line_noindent "declare void @write(i32) nounwind";

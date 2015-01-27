@@ -1,13 +1,13 @@
 
 (**************** グローバル変数の宣言 ****************)
 
+let dummy = create_array 0 0.0
+
 (* オブジェクトの個数 *)
 let n_objects = create_array 1 0
 
 (* オブジェクトのデータを入れるベクトル（最大60個）*)
-let objects =
-  let dummy = create_array 0 0.0 in
-  create_array 60 (0, 0, 0, 0, dummy, dummy, false, dummy, dummy, dummy, dummy)
+let objects = create_array 60 (0, 0, 0, 0, dummy, dummy, false, dummy, dummy, dummy, dummy)
 
 (* Screen の中心座標 *)
 let screen = create_array 3 0.0
@@ -64,27 +64,14 @@ let screenz_dir = create_array 3 0.0
 let ptrace_dirvec  = create_array 3 0.0
 
 (* 間接光サンプリングに使う方向ベクトル *)
-let dirvecs =
-  let dummyf = create_array 0 0.0 in
-  let dummyff = create_array 0 dummyf in
-  let dummy_vs = create_array 0 (dummyf, dummyff) in
-  create_array 5 dummy_vs
+let dirvecs = create_array 5 (create_array 0 (dummy, (create_array 0 dummy)))
 
 (* 光源光の前処理済み方向ベクトル *)
-let light_dirvec =
-  let dummyf2 = create_array 0 0.0 in
-  let v3 = create_array 3 0.0 in
-  let consts = create_array 60 dummyf2 in
-  (v3, consts)
+let light_dirvec = (create_array 3 0.0, create_array 60 dummy)
 
 (* 鏡平面の反射情報 *)
-let reflections =
-  let dummyf3 = create_array 0 0.0 in
-  let dummyff3 = create_array 0 dummyf3 in
-  let dummydv = (dummyf3, dummyff3) in
-  create_array 180 (0, dummydv, 0.0)
+let reflections = create_array 180 (0, (dummy, create_array 0 dummy), 0.0)
 
 (* reflectionsの有効な要素数 *)
-
 let n_reflections = create_array 1 0
 

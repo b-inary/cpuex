@@ -3,12 +3,6 @@ open Mylib
 open Parser
 open Lexing
 
-let new_ident =
-  let counter = ref (-1) in
-  fun () ->
-    incr counter;
-    "Tmp" ^ string_of_int !counter
-
 let init lexbuf fname =
   lexbuf.lex_curr_p <- {
     pos_fname = fname;
@@ -72,7 +66,6 @@ rule token = parse
   | '.'             { DOT }
   | "<-"            { ASSIGN }
   | "create_array"  { MAKEARRAY }
-  | '_'             { IDENT (new_ident ()) }
   | ident as lxm    { IDENT lxm }
   | "#read"         { READ }
   | "#write"        { WRITE }
