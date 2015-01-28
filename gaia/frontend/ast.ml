@@ -10,7 +10,7 @@ type atom = Unit | Bool of bool | Int of int | Float of float | Var of string
 
 (* Abstract Syntax Tree *)
 type ast =
-    Atom    of atom
+  | Atom    of atom
   | Not     of ast
   | IOp     of iop * ast * ast
   | FOp     of fop * ast * ast
@@ -30,7 +30,7 @@ type ast =
   | Dir     of dir * ast
 
 let atom_to_string = function
-    Unit -> "()"
+  | Unit -> "()"
   | Bool b -> string_of_bool b
   | Int i -> string_of_int i
   | Float f -> string_of_float f
@@ -39,7 +39,7 @@ let atom_to_string = function
 let ast_to_string a =
   let join = String.concat in
   let rec go fmt = function
-      Atom a ->                 atom_to_string a
+    | Atom a ->                 atom_to_string a
     | Not e ->                  sprintf "(not %a)" go e
     | IOp (Add, e1, e2) ->      sprintf "(%a + %a)" go e1 go e2
     | IOp (Sub, e1, e2) ->      sprintf "(%a - %a)" go e1 go e2
@@ -77,7 +77,7 @@ let ast_to_string a =
     | Dir (CastInt, e) ->       sprintf "(#castint %a)" go e
     | Dir (CastFloat, e) ->     sprintf "(#castfloat %a)" go e
   and go_list fmt = function
-      [], _ -> ""
+    | [], _ -> ""
     | [e], _ ->                 sprintf "%a" go e
     | e::es, delim ->           sprintf "%a%s%a" go e delim go_list (es, delim) in
   go () a

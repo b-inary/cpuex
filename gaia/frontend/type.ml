@@ -2,7 +2,7 @@
 open Printf
 
 type ty =
-    TUnit
+  | TUnit
   | TBool
   | TInt
   | TFloat
@@ -16,7 +16,7 @@ let new_tyvar () = TVar (ref None)
 let type_to_string t =
   let vars = ref [] in
   let rec go fmt = function
-      TUnit -> "unit"
+    | TUnit -> "unit"
     | TBool -> "bool"
     | TInt -> "int"
     | TFloat -> "float"
@@ -30,7 +30,7 @@ let type_to_string t =
         sprintf "'_%c" (List.assq r !vars)
 
   and go_list fmt = function
-      [], _, _ -> ""
+    | [], _, _ -> ""
     | [TTuple _ as t], _, true | [TFun _ as t], _, true -> sprintf "(%a)" go t
     | [t], _, _ -> go fmt t
     | (TTuple _ as t)::ts, delim, (true as flag) | (TFun _ as t)::ts, delim, flag ->
