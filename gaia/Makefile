@@ -1,16 +1,19 @@
 
 TARGET = min-rt.opt.ll
-BIN = bin/urns-front bin/sim
+BIN = bin/urns-front bin/urns-back bin/sim
 
-all: $(TARGET) $(BIN)
-
-$(TARGET): bin/urns-front
+$(TARGET): $(BIN)
 	bin/urns-front globals.ml min-rt.ml
 	bin/opt.sh min-rt.ll
+	bin/urns-back min-rt.opt.ll
 
 bin/urns-front: frontend/
 	ocamlbuild frontend/main.native -r -lib str -no-links -use-menhir
 	cp _build/frontend/main.native $@
+
+bin/urns-back: backend/
+	ocamlbuild backend/main.native -no-links -use-menhir
+	cp _build/backend/main.native $@
 
 bin/sim: software/
 	git submodule update --init
