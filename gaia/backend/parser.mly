@@ -150,7 +150,7 @@ def:
     { if size $2 = 1 then Load ($6, gep $5 $7) else failwith "parse" }
   | GEP typ value idx
     { Gep ($3, gep $2 $4) }
-  | BITCAST typ value TO typ
+  | BITCAST typ VAR TO typ
     { Mov $3 }
   | SITOFP I32 value TO FLT
     { IToF $3 }

@@ -12,7 +12,7 @@ type binop =
   | FEQ | FNE | FLT | FLE | FGT | FGE
 
 type def =
-  | Mov of value
+  | Mov of string
   | Bin of binop * value * value
   | IToF of value
   | Load of value * value

@@ -16,5 +16,6 @@ let parse fname =
   | Failure msg -> error msg
 
 let () =
-  ignore (parse Sys.argv.(1));
+  let llvm_ast = parse Sys.argv.(1) in
+  ignore (Conv.conv_funcs (snd llvm_ast));
   print_endline "finished"

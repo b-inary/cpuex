@@ -51,3 +51,7 @@ module List = struct
     | [] -> invalid_arg "List.max"
     | x :: xs -> fold_left max x xs
 end
+
+let rec range x y =
+  if x >= y then [] else
+  x :: range (x + 1) y
