@@ -31,6 +31,8 @@ let add_label l =
 
 let global_buf = ref []
 
+let ptr_size = ref 2
+
 
 let atos = function
   | Bool b -> string_of_bool b
@@ -137,7 +139,7 @@ and tuple env exprs =
   let ty = TTuple (snd (List.split elems)) in
   let tmp = new_ident () in
   let ret = new_ident () in
-  add_line "%s = call noalias i8* @malloc(i32 %d)" tmp (List.length exprs * 4);
+  add_line "%s = call noalias i8* @malloc(i32 %d)" tmp (List.length exprs lsl !ptr_size);
   add_line "%s = bitcast i8* %s to %s" ret tmp (ttos ty);
   let store i (a, t) =
     let tmp = new_ident () in
@@ -151,10 +153,10 @@ and create_array env expr1 expr2 =
   let (atom2, t) = insert_let env expr2 in
   let ty = TArray t in
   let sz = match atom1 with
-    | Int i -> Int (i * 4)
+    | Int i -> Int (i lsl !ptr_size)
     | Var v ->
         let ret = new_ident () in
-        add_line "%s = shl i32 %s, 2" ret v;
+        add_line "%s = shl i32 %s, %d" ret v !ptr_size;
         Var ret
     | _ -> failwith "create_array: something wrong" in
   if sz = Int 0 then (Var "null", ty) else begin

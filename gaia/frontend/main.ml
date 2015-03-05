@@ -20,10 +20,12 @@ let () =
   let outfile = ref "" in
   let nolib = ref false in
   let inlineall = ref false in
+  let bit64 = ref false in
   let speclist = [
     ("-o", Arg.Set_string outfile, "<file> Set output file name");
     ("-no-lib", Arg.Set nolib, " Do not link " ^ libname);
-    ("-always-inline", Arg.Set inlineall, " Specify \"alwaysinline\" attribute")
+    ("-always-inline", Arg.Set inlineall, " Specify \"alwaysinline\" attribute");
+    ("-64bit", Arg.Set bit64, " Compile for 64bit environment")
   ] in
   Arg.parse (Arg.align speclist)
     (fun fname -> inputs := fname :: !inputs)
@@ -31,6 +33,7 @@ let () =
   if !inputs = [] && !outfile = "" then nolib := true;
   inputs := if !inputs = [] then ["<stdin>"] else List.rev !inputs;
   inputs := if !nolib then !inputs else libpath :: !inputs;
+  if !bit64 then Emit.ptr_size := 3;
   let read fname =
     let ic = if fname = "<stdin>" then stdin else open_in fname in
     sprintf "#file %s/\n%s" (Filename.basename fname) (input_all ic) in
