@@ -1,3 +1,6 @@
 [submodule "gaia/software"]
 	path = gaia/software
 	url = git@github.com:b-inary/gaia-software.git
+[submodule "gaia-mincaml/toolchain"]
+	path = gaia-mincaml/toolchain
+	url = git@github.com:b-inary/gaia-software.git

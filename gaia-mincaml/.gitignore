@@ -1,0 +1,6 @@
+_build/
+bin/
+contest.ppm
+min-rt.out
+min-rt.out.s
+min-rt.s
