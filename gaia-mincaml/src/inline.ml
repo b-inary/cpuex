@@ -6,7 +6,8 @@ open KNormal
 let threshold = ref 0
 
 let rec size = function
-  | IfEq (_, _, e1, e2) | IfNe (_, _, e1, e2) | IfZ (_, e1, e2) | IfNz (_, e1, e2)
+  | IfEq (_, _, e1, e2) | IfNe (_, _, e1, e2)
+  | IfZ (_, e1, e2) | IfNz (_, e1, e2)
   | Let (_, e1, e2) | LetRec ({ body = e1 }, e2) ->
       1 + size e1 + size e2
   | LetTuple (_, _, e) -> 1 + size e

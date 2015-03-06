@@ -5,7 +5,7 @@ let limit = ref 1000
 let rec iter n e =
   if !Typing.lv >= 3 then Format.eprintf "[info] iteration: %d@." (!limit - n + 1);
   if n = 0 then (if !Typing.lv >= 1 then Format.eprintf "[info] iteration terminated@."; e) else
-  let e' = Elim.f (ConstFold.f (Inline.f (Assoc.f (Beta.f e)))) in
+  let e' = e |> Beta.f |> Assoc.f |> Inline.f |> ConstFold.f |> Elim.f in
   if e = e' then (if !Typing.lv >= 2 then Format.eprintf "[info] iteration finished (%d times)@." (!limit - n + 1) ; e) else
   iter (n - 1) e'
 

@@ -3,7 +3,8 @@ open KNormal
 
  (* 副作用の有無 *)
 let rec effect = function
-  | Let (_, e1, e2) | IfEq (_, _, e1, e2) | IfNe (_, _, e1, e2) | IfZ (_, e1, e2) | IfNz (_, e1, e2) ->
+  | Let (_, e1, e2) | IfEq (_, _, e1, e2) | IfNe (_, _, e1, e2)
+  | IfZ (_, e1, e2) | IfNz (_, e1, e2) ->
       effect e1 || effect e2
   | LetRec (_, e) | LetTuple (_, _, e) -> effect e
   | App _ | Store _ | StoreL _ | ExtFunApp _ -> true

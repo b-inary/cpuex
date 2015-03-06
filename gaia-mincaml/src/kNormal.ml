@@ -72,8 +72,8 @@ let insert_let (e, t) k =
 (* K正規化ルーチン本体 *)
 let rec g env = function
   | Syntax.Unit -> (Unit, Type.Unit)
-  | Syntax.Bool  b -> (Int (if b then 1 else 0), Type.Int)
-  | Syntax.Int   i -> (Int i, Type.Int)
+  | Syntax.Bool b -> (Int (if b then 1 else 0), Type.Int)
+  | Syntax.Int i -> (Int i, Type.Int)
   | Syntax.Float d -> (Float d, Type.Float)
   | Syntax.Not e -> insert_let (g env e) (fun x -> (Not x, Type.Int))
   | Syntax.Neg e -> insert_let (g env e) (fun x -> (Neg x, Type.Int))
