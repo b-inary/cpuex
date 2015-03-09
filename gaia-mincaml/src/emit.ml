@@ -10,6 +10,8 @@ let stackset = ref S.empty
 (* Saveされた変数の、スタックにおける位置 *)
 let stackmap = ref []
 
+let is_leaf_function = ref true
+
 let save x =
   stackset := S.add x !stackset;
   if not (List.mem x !stackmap) then
@@ -49,9 +51,12 @@ let rec print_rev oc = function
       print_rev oc ls;
       if l = "pop stack\n" then begin
         let sz = stacksize () in
-        fprintf oc "    leave\n";
-        fprintf oc "    add     rsp, rsp, %d\n" (sz + 4)
-      end else
+        if not !is_leaf_function then begin
+          fprintf oc "    leave\n";
+          fprintf oc "    add     rsp, rsp, %d\n" (sz + 4)
+        end else if sz > 0 then
+          fprintf oc "    add     rsp, rsp, %d\n" sz
+      end else if not (!is_leaf_function && l = "    leave\n") then
         let l = String.map (fun c -> if c = '$' then 'r' else c) l in
         fprintf oc "%s" l
 
@@ -158,12 +163,14 @@ and g' oc = function
       al "pop stack";
       al "    br      %s" x
   | (NonTail a, CallCls (x, ys)) ->
+      is_leaf_function := false;
       g'_args oc [(x, reg_cl)] ys;
       al "    mov     %s, [%s]" reg_sw reg_cl;
       al "    call    %s" reg_sw;
       if List.mem a allregs && a <> regs.(0) then
         al "    mov     %s, %s" a regs.(0)
   | (NonTail a, CallDir (Id.L x, ys)) ->
+      is_leaf_function := false;
       g'_args oc [] ys;
       al "    call    %s" x;
       if List.mem a allregs && a <> regs.(0) then
@@ -205,10 +212,14 @@ let h oc { name = Id.L x; args = _; body = e; ret = _ } =
   fprintf oc "%s:\n" x;
   stackset := S.empty;
   stackmap := [];
+  is_leaf_function := true;
   lines := [];
   g oc (Tail, e);
   let sz = stacksize () in
-  fprintf oc "    enter   %d\n" sz;
+  if not !is_leaf_function then
+    fprintf oc "    enter   %d\n" sz
+  else if sz > 0 then
+    fprintf oc "    sub     rsp, rsp, %d\n" sz;
   print_rev oc !lines
 
 let f oc (Prog (fundefs, e)) =
