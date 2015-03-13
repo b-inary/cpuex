@@ -133,8 +133,6 @@ and g' dest cont regenv = function
   | Ne (x, y) -> (Ans (Ne (find x regenv, find y regenv)), regenv)
   | Lt (x, y) -> (Ans (Lt (find x regenv, find y regenv)), regenv)
   | Le (x, y) -> (Ans (Le (find x regenv, find y regenv)), regenv)
-  | FEq (x, y) -> (Ans (FEq (find x regenv, find y regenv)), regenv)
-  | FNe (x, y) -> (Ans (FNe (find x regenv, find y regenv)), regenv)
   | FLt (x, y) -> (Ans (FLt (find x regenv, find y regenv)), regenv)
   | FLe (x, y) -> (Ans (FLe (find x regenv, find y regenv)), regenv)
   | IToF x -> (Ans (IToF (find x regenv)), regenv)

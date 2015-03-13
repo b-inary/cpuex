@@ -111,7 +111,7 @@ exp:
 | XOR simple_exp simple_exp
     %prec prec_app          { Ne ($2, $3) }
 | FEQUAL simple_exp simple_exp
-    %prec prec_app          { FEq ($2, $3) }
+    %prec prec_app          { Eq ($2, $3) }
 | FLESS simple_exp simple_exp
     %prec prec_app          { FLt ($2, $3) }
 | FISPOS simple_exp
@@ -119,7 +119,7 @@ exp:
 | FISNEG simple_exp
     %prec prec_app          { FLt ($2, Float 0.0) }
 | FISZERO simple_exp
-    %prec prec_app          { FEq ($2, Float 0.0) }
+    %prec prec_app          { Eq ($2, Float 0.0) }
 | FHALF simple_exp
     %prec prec_app          { FMul ($2, Float 0.5) }
 | FSQR simple_exp

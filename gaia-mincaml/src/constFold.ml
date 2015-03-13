@@ -57,8 +57,6 @@ let rec g env = function
         | Ne (x, y) -> Eq (x, y)
         | Lt (x, y) -> Le (y, x)
         | Le (x, y) -> Lt (y, x)
-        | FEq (x, y) -> FNe (x, y)
-        | FNe (x, y) -> FEq (x, y)
         | FLt (x, y) -> FLe (y, x)
         | FLe (x, y) -> FLt (y, x)
         | _ -> e
@@ -115,16 +113,16 @@ let rec g env = function
       Float (do_sign s (findf x env *. findf y env))
   | Eq (x, y) when memi x env && memi y env ->
       Int (if findi x env =  findi y env then 1 else 0)
+  | Eq (x, y) when memf x env && memf y env ->
+      Int (if findf x env =  findf y env then 1 else 0)
   | Ne (x, y) when memi x env && memi y env ->
       Int (if findi x env <> findi y env then 1 else 0)
+  | Ne (x, y) when memf x env && memf y env ->
+      Int (if findf x env <> findf y env then 1 else 0)
   | Lt (x, y) when memi x env && memi y env ->
       Int (if findi x env <  findi y env then 1 else 0)
   | Le (x, y) when memi x env && memi y env ->
       Int (if findi x env <= findi y env then 1 else 0)
-  | FEq (x, y) when memf x env && memf y env ->
-      Int (if findf x env =  findf y env then 1 else 0)
-  | FNe (x, y) when memf x env && memf y env ->
-      Int (if findf x env <> findf y env then 1 else 0)
   | FLt (x, y) when memf x env && memf y env ->
       Int (if findf x env <  findf y env then 1 else 0)
   | FLe (x, y) when memf x env && memf y env ->
@@ -134,17 +132,21 @@ let rec g env = function
   | Floor x when memf x env -> Float (floor (findf x env))
   | IfEq (x, y, e1, e2) when memi x env && memi y env ->
       if findi x env = findi y env then g env e1 else g env e2
-  | IfEq (x, y, e1, e2) when memi x env && findi x env = 0 ->
+  | IfEq (x, y, e1, e2) when memf x env && memf y env ->
+      if findf x env = findf y env then g env e1 else g env e2
+  | IfEq (x, y, e1, e2) when (memi x env && findi x env = 0) || (memf x env && findf x env = 0.0) ->
       IfZ (y, g env e1, g env e2)
-  | IfEq (x, y, e1, e2) when memi y env && findi y env = 0 ->
+  | IfEq (x, y, e1, e2) when (memi y env && findi y env = 0) || (memf y env && findf y env = 0.0) ->
       IfZ (x, g env e1, g env e2)
   | IfEq (x, y, e1, e2) ->
       IfEq (x, y, g env e1, g env e2)
   | IfNe (x, y, e1, e2) when memi x env && memi y env ->
       if findi x env <> findi y env then g env e1 else g env e2
-  | IfNe (x, y, e1, e2) when memi x env && findi x env = 0 ->
+  | IfNe (x, y, e1, e2) when memf x env && memf y env ->
+      if findf x env <> findf y env then g env e1 else g env e2
+  | IfNe (x, y, e1, e2) when (memi x env && findi x env = 0) || (memf x env && findf x env = 0.0) ->
       IfNz (y, g env e1, g env e2)
-  | IfNe (x, y, e1, e2) when memi y env && findi y env = 0 ->
+  | IfNe (x, y, e1, e2) when (memi y env && findi y env = 0) || (memf y env && findf y env = 0.0) ->
       IfNz (x, g env e1, g env e2)
   | IfNe (x, y, e1, e2) ->
       IfNe (x, y, g env e1, g env e2)

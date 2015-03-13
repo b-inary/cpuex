@@ -27,8 +27,6 @@ let rec g env = function
   | Ne (x, y) -> Ne (find x env, find y env)
   | Lt (x, y) -> Lt (find x env, find y env)
   | Le (x, y) -> Le (find x env, find y env)
-  | FEq (x, y) -> FEq (find x env, find y env)
-  | FNe (x, y) -> FNe (find x env, find y env)
   | FLt (x, y) -> FLt (find x env, find y env)
   | FLe (x, y) -> FLe (find x env, find y env)
   | IToF x -> IToF (find x env)

@@ -9,19 +9,6 @@ let expand xts ini it =
         | _ -> (off + 4, it x t off acc))
     ini xts
 
-let memmovl x env =
-  try
-    match M.find x env with
-      | Closure.ExtTuple _ | Closure.ExtArray _ -> true
-      | _ -> false
-  with Not_found -> false
-
-let findmovl x env =
-  match M.find x env with
-    | Closure.ExtTuple l -> l
-    | Closure.ExtArray l -> l
-    | _ -> failwith "findmovl"
-
 let sign_conv = function
   | Closure.Nop -> (Nop : fpu_sign)
   | Closure.Plus -> Plus
@@ -50,29 +37,31 @@ let rec g env = function
   | Closure.Ne (x, y) -> Ans (Ne (x, y))
   | Closure.Lt (x, y) -> Ans (Lt (x, y))
   | Closure.Le (x, y) -> Ans (Le (x, y))
-  | Closure.FEq (x, y) -> Ans (FEq (x, y))
-  | Closure.FNe (x, y) -> Ans (FNe (x, y))
   | Closure.FLt (x, y) -> Ans (FLt (x, y))
   | Closure.FLe (x, y) -> Ans (FLe (x, y))
   | Closure.IToF x -> Ans (IToF x)
   | Closure.FToI x -> Ans (FToI x)
   | Closure.Floor x -> Ans (Floor x)
   | Closure.IfEq (x, y, e1, e2) ->
-      (match M.find x env with
-        | Type.Bool | Type.Int -> Ans (IfEq (x, y, g env e1, g env e2))
-        | _ -> failwith "equality supported only for bool and int")
+      begin match M.find x env with
+        | Type.Bool | Type.Int | Type.Float -> Ans (IfEq (x, y, g env e1, g env e2))
+        | _ -> failwith "equality supported only for bool, int, and float"
+      end
   | Closure.IfNe (x, y, e1, e2) ->
-      (match M.find x env with
-        | Type.Bool | Type.Int -> Ans (IfNe (x, y, g env e1, g env e2))
-        | _ -> failwith "equality supported only for bool and int")
+      begin match M.find x env with
+        | Type.Bool | Type.Int | Type.Float -> Ans (IfNe (x, y, g env e1, g env e2))
+        | _ -> failwith "equality supported only for bool, int, and float"
+      end
   | Closure.IfZ (x, e1, e2) ->
-      (match M.find x env with
-        | Type.Bool | Type.Int -> Ans (IfEq (x, "$0", g env e1, g env e2))
-        | _ -> failwith "equality supported only for bool and int")
+      begin match M.find x env with
+        | Type.Bool | Type.Int | Type.Float -> Ans (IfEq (x, "$0", g env e1, g env e2))
+        | _ -> failwith "equality supported only for bool, int, and float"
+      end
   | Closure.IfNz (x, e1, e2) ->
-      (match M.find x env with
-        | Type.Bool | Type.Int -> Ans (IfNe (x, "$0", g env e1, g env e2))
-        | _ -> failwith "equality supported only for bool and int")
+      begin match M.find x env with
+        | Type.Bool | Type.Int | Type.Float -> Ans (IfNe (x, "$0", g env e1, g env e2))
+        | _ -> failwith "equality supported only for bool, int, and float"
+      end
   | Closure.Let ((x, t1), e1, e2) ->
       let e1' = g env e1 in
       let e2' = g (M.add x t1 env) e2 in

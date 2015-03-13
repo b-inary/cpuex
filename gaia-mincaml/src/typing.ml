@@ -43,8 +43,6 @@ let rec deref_term = function
   | Ne (e1, e2) -> Ne (deref_term e1, deref_term e2)
   | Lt (e1, e2) -> Lt (deref_term e1, deref_term e2)
   | Le (e1, e2) -> Le (deref_term e1, deref_term e2)
-  | FEq (e1, e2) -> FEq (deref_term e1, deref_term e2)
-  | FNe (e1, e2) -> FNe (deref_term e1, deref_term e2)
   | FLt (e1, e2) -> FLt (deref_term e1, deref_term e2)
   | FLe (e1, e2) -> FLe (deref_term e1, deref_term e2)
   | IToF e -> IToF (deref_term e)
@@ -128,7 +126,7 @@ let rec g env e =
           unify Type.Int (g env e1);
           unify Type.Int (g env e2);
           Type.Bool
-      | FEq (e1, e2) | FNe (e1, e2) | FLt (e1, e2) | FLe (e1, e2) ->
+      | FLt (e1, e2) | FLe (e1, e2) ->
           unify Type.Float (g env e1);
           unify Type.Float (g env e2);
           Type.Bool

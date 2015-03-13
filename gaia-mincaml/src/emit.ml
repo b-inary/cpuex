@@ -114,8 +114,6 @@ and g' oc = function
   | (NonTail x, Ne (y, z))      -> al "    cmpne   %s, %s, %s" x y z
   | (NonTail x, Lt (y, z))      -> al "    cmplt   %s, %s, %s" x y z
   | (NonTail x, Le (y, z))      -> al "    cmple   %s, %s, %s" x y z
-  | (NonTail x, FEq (y, z))     -> al "    fcmpeq  %s, %s, %s" x y z
-  | (NonTail x, FNe (y, z))     -> al "    fcmpne  %s, %s, %s" x y z
   | (NonTail x, FLt (y, z))     -> al "    fcmplt  %s, %s, %s" x y z
   | (NonTail x, FLe (y, z))     -> al "    fcmple  %s, %s, %s" x y z
   | (NonTail x, IToF y)         -> al "    itof    %s, %s" x y
@@ -138,7 +136,7 @@ and g' oc = function
       al "    ret"
   | (Tail, (Li _ | Lf _ | Mov _ | MovL _ | Not _ | Neg _ | Add _ | Sub _ | Shl _ | Shr _ |
             FNeg _ | FAbs _ | FAdd _ | FSub _ | FMul _ | Eq _ | Ne _ | Lt _ | Le _ |
-            FEq _ | FNe _ | FLt _ | FLe _ | IToF _ | FToI _ | Floor _ | Ld _ | LdL _ as exp)) ->
+            FLt _ | FLe _ | IToF _ | FToI _ | Floor _ | Ld _ | LdL _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);
       al "    leave";
       al "    ret"

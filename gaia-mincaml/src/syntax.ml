@@ -7,7 +7,7 @@ type t =
   | FNeg of t | FAbs of t
   | FAdd of t * t | FSub of t * t | FMul of t * t
   | Eq of t * t | Ne of t * t | Lt of t * t | Le of t * t
-  | FEq of t * t | FNe of t * t | FLt of t * t | FLe of t * t
+  | FLt of t * t | FLe of t * t
   | IToF of t | FToI of t | Floor of t
   | If of t * t * t
   | Let of (Id.t * Type.t) * t * t

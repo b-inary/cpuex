@@ -16,7 +16,6 @@ type t =
   | FMul of fpu_sign * Id.t * Id.t
   | Eq of Id.t * Id.t | Ne of Id.t * Id.t
   | Lt of Id.t * Id.t | Le of Id.t * Id.t
-  | FEq of Id.t * Id.t | FNe of Id.t * Id.t
   | FLt of Id.t * Id.t | FLe of Id.t * Id.t
   | IToF of Id.t | FToI of Id.t | Floor of Id.t
   | IfEq of Id.t * Id.t * t * t | IfNe of Id.t * Id.t * t * t
@@ -48,7 +47,7 @@ let rec fv = function
   | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _)
   | FNeg x | FAbs x | IToF x | FToI x | Floor x | Load (x, _) | Var x | StoreL (x, _, _) -> S.singleton x
   | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
-  | Eq (x, y) | Ne (x, y) | Lt (x, y) | Le (x, y) | FEq (x, y) | FNe (x, y) | FLt (x, y) | FLe (x, y)
+  | Eq (x, y) | Ne (x, y) | Lt (x, y) | Le (x, y) | FLt (x, y) | FLe (x, y)
   | Store (x, y, _) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2) | IfNe (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | IfZ (x, e1, e2) | IfNz (x, e1, e2) -> S.add x (S.union (fv e1) (fv e2))
@@ -88,8 +87,6 @@ let rec g env known = function
   | KNormal.Ne (x, y) -> Ne (x, y)
   | KNormal.Lt (x, y) -> Lt (x, y)
   | KNormal.Le (x, y) -> Le (x, y)
-  | KNormal.FEq (x, y) -> FEq (x, y)
-  | KNormal.FNe (x, y) -> FNe (x, y)
   | KNormal.FLt (x, y) -> FLt (x, y)
   | KNormal.FLe (x, y) -> FLe (x, y)
   | KNormal.IToF x -> IToF x
