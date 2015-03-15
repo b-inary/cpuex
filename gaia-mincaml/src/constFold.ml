@@ -105,6 +105,8 @@ let rec g env = function
         | FMul (s, x, y) -> FMul (Plus, x, y)
         | _ -> e
       with Not_found -> e end
+  | FInv x when memf x env -> Float (1.0 /. findf x env)
+  | Sqrt x when memf x env -> Float (sqrt (findf x env))
   | FAdd (s, x, y) when memf x env && memf y env ->
       Float (do_sign s (findf x env +. findf y env))
   | FSub (s, x, y) when memf x env && memf y env ->

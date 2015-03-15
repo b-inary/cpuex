@@ -13,7 +13,8 @@ let rec target' src (dest, t) = function
       let c2, rs2 = target src (dest, t) e2 in
       (c1 && c2, rs1 @ rs2)
   | CallCls (x, ys) ->
-      (true, (target_args src regs 0 ys @ if x = src then [reg_cl] else []))
+      failwith "regalloc target callcls"
+      (* (true, (target_args src regs 0 ys @ if x = src then [reg_cl] else [])) *)
   | CallDir (_, ys) ->
       (true, (target_args src regs 0 ys))
   | _ -> false, []
@@ -126,6 +127,8 @@ and g' dest cont regenv = function
   | Shr (x, y) -> (Ans (Shr (find x regenv, y)), regenv)
   | FNeg x -> (Ans (FNeg (find x regenv)), regenv)
   | FAbs x -> (Ans (FAbs (find x regenv)), regenv)
+  | FInv x -> (Ans (FInv (find x regenv)), regenv)
+  | Sqrt x -> (Ans (Sqrt (find x regenv)), regenv)
   | FAdd (s, x, y) -> (Ans (FAdd (s, find x regenv, find y regenv)), regenv)
   | FSub (s, x, y) -> (Ans (FSub (s, find x regenv, find y regenv)), regenv)
   | FMul (s, x, y) -> (Ans (FMul (s, find x regenv, find y regenv)), regenv)
@@ -180,13 +183,12 @@ and g'_call dest cont regenv exp constr ys =
 
 (* 関数のレジスタ割り当て *)
 let h { name = Id.L x; args = ys; body = e; ret = t } =
-  let regenv = M.add x reg_cl M.empty in
   let (i, arg_regs, regenv) =
     List.fold_left
       (fun (i, arg_regs, regenv) y ->
         let r = regs.(i) in
         (i + 1, arg_regs @ [r], (assert (not (is_reg y)); M.add y r regenv)))
-      (0, [], regenv) ys in
+      (0, [], M.empty) ys in
   let a =
     match t with
       | Type.Unit -> Id.gentmp Type.Unit

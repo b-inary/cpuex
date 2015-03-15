@@ -11,6 +11,7 @@ type t =
   | Add of Id.t * var_or_imm | Sub of Id.t * var_or_imm
   | Shl of Id.t * int | Shr of Id.t * int
   | FNeg of Id.t | FAbs of Id.t
+  | FInv of Id.t | Sqrt of Id.t
   | FAdd of fpu_sign * Id.t * Id.t
   | FSub of fpu_sign * Id.t * Id.t
   | FMul of fpu_sign * Id.t * Id.t
@@ -45,7 +46,8 @@ type prog = Prog of fundef list * t
 let rec fv = function
   | Unit | Int _ | Float _  | LoadL _ | ExtTuple _ | ExtArray _ -> S.empty
   | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _)
-  | FNeg x | FAbs x | IToF x | FToI x | Floor x | Load (x, _) | Var x | StoreL (x, _, _) -> S.singleton x
+  | FNeg x | FAbs x | FInv x | Sqrt x | IToF x | FToI x | Floor x
+  | Load (x, _) | Var x | StoreL (x, _, _) -> S.singleton x
   | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
   | Eq (x, y) | Ne (x, y) | Lt (x, y) | Le (x, y) | FLt (x, y) | FLe (x, y)
   | Store (x, y, _) -> S.of_list [x; y]
@@ -80,6 +82,8 @@ let rec g env known = function
   | KNormal.Shr (x, y) -> Shr (x, y)
   | KNormal.FNeg x -> FNeg x
   | KNormal.FAbs x -> FAbs x
+  | KNormal.FInv x -> FInv x
+  | KNormal.Sqrt x -> Sqrt x
   | KNormal.FAdd (s, x, y) -> FAdd (sign_conv s, x, y)
   | KNormal.FSub (s, x, y) -> FSub (sign_conv s, x, y)
   | KNormal.FMul (s, x, y) -> FMul (sign_conv s, x, y)

@@ -19,6 +19,8 @@ let rec g env = function
   | Shr (x, y) -> Shr (find x env, y)
   | FNeg x -> FNeg (find x env)
   | FAbs x -> FAbs (find x env)
+  | FInv x -> FInv (find x env)
+  | Sqrt x -> Sqrt (find x env)
   | FAdd (s, x, y) -> FAdd (s, find x env, find y env)
   | FSub (s, x, y) -> FSub (s, find x env, find y env)
   | FMul (s, x, y) -> FMul (s, find x env, find y env)

@@ -50,6 +50,7 @@ rule token = parse
 | "<-"    { LESS_MINUS }
 | ';'     { SEMICOLON }
 | eof     { EOF }
+| "sqrt"    { SQRT }
 | "fequal"  { FEQUAL }
 | "fless"   { FLESS }
 | "fispos"  { FISPOS }

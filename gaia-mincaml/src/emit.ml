@@ -98,6 +98,8 @@ and g' oc = function
   | (NonTail x, Shr (y, z))     -> al "    shr     %s, %s, %d" x y z
   | (NonTail x, FNeg y)         -> al "    fadd.neg %s, %s, $0" x y
   | (NonTail x, FAbs y)         -> al "    fadd.abs %s, %s, $0" x y
+  | (NonTail x, FInv y)         -> al "    finv    %s, %s" x y
+  | (NonTail x, Sqrt y)         -> al "    fsqrt   %s, %s" x y
   | (NonTail x, FAdd (Nop, y, z))   -> al "    fadd    %s, %s, %s" x y z
   | (NonTail x, FAdd (Plus, y, z))  -> al "    fadd.abs %s, %s, %s" x y z
   | (NonTail x, FAdd (Minus, y, z)) -> al "    fadd.abs.neg %s, %s, %s" x y z
@@ -135,7 +137,7 @@ and g' oc = function
       al "    leave";
       al "    ret"
   | (Tail, (Li _ | Lf _ | Mov _ | MovL _ | Not _ | Neg _ | Add _ | Sub _ | Shl _ | Shr _ |
-            FNeg _ | FAbs _ | FAdd _ | FSub _ | FMul _ | Eq _ | Ne _ | Lt _ | Le _ |
+            FNeg _ | FAbs _ | FInv _ | Sqrt _ | FAdd _ | FSub _ | FMul _ | Eq _ | Ne _ | Lt _ | Le _ |
             FLt _ | FLe _ | IToF _ | FToI _ | Floor _ | Ld _ | LdL _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);
       al "    leave";
@@ -152,21 +154,27 @@ and g' oc = function
   | (NonTail z, IfNe (x, y, e1, e2)) -> g'_non_tail_if oc (NonTail z) x y e1 e2 "bne"
   (* 関数呼び出しの仮想命令の実装 *)
   | (Tail, CallCls (x, ys)) ->
+      failwith "emit callcls"
+(*
       g'_args oc [(x, reg_cl)] ys;
       al "    mov     %s, [%s]" reg_sw reg_cl;
       al "pop stack";
       al "    br      %s" reg_sw
+*)
   | (Tail, CallDir (Id.L x, ys)) ->
       g'_args oc [] ys;
       al "pop stack";
       al "    br      %s" x
   | (NonTail a, CallCls (x, ys)) ->
+      failwith "emit callcls"
+(*
       is_leaf_function := false;
       g'_args oc [(x, reg_cl)] ys;
       al "    mov     %s, [%s]" reg_sw reg_cl;
       al "    call    %s" reg_sw;
       if List.mem a allregs && a <> regs.(0) then
         al "    mov     %s, %s" a regs.(0)
+*)
   | (NonTail a, CallDir (Id.L x, ys)) ->
       is_leaf_function := false;
       g'_args oc [] ys;

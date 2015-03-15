@@ -30,6 +30,8 @@ let rec g env = function
   | Closure.Shr (x, y) -> Ans (Shr (x, y))
   | Closure.FNeg x -> Ans (FNeg x)
   | Closure.FAbs x -> Ans (FAbs x)
+  | Closure.FInv x -> Ans (FInv x)
+  | Closure.Sqrt x -> Ans (Sqrt x)
   | Closure.FAdd (s, x, y) -> Ans (FAdd (sign_conv s, x, y))
   | Closure.FSub (s, x, y) -> Ans (FSub (sign_conv s, x, y))
   | Closure.FMul (s, x, y) -> Ans (FMul (sign_conv s, x, y))
@@ -116,13 +118,9 @@ let rec g env = function
 
 (* 関数の仮想マシンコード生成 *)
 let h { Closure.name = (Id.L x, t); Closure.args = yts; Closure.formal_fv = zts; Closure.body = e } =
-  let (offset, load) =
-    expand
-      zts
-      (4, g (M.add x t (M.add_list yts (M.add_list zts M.empty))) e)
-      (fun z t offset load -> Let ((z, t), Ld (reg_cl, offset), load)) in
+  let e = g (M.add x t (M.add_list yts (M.add_list zts M.empty))) e in
   match t with
-    | Type.Fun (_, t2) -> { name = Id.L x; args = fst (List.split yts); body = load; ret = t2 }
+    | Type.Fun (_, t2) -> { name = Id.L x; args = fst (List.split yts); body = e; ret = t2 }
     | _ -> assert false
 
 (* プログラム全体の仮想マシンコード生成 *)

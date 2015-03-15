@@ -4,10 +4,10 @@
 read_int:
 .global read_float
 read_float:
-    read    r4
-    read    r3
-    read    r2
     read    r1
+    read    r2
+    read    r3
+    read    r4
     shl     r2, r2,  8
     shl     r3, r3, 16
     shl     r4, r4, 24
@@ -42,58 +42,58 @@ array_L2:
 
 # <library> inverse(x)
 # no check for exponent = 0, 253-255
-.global finv
-finv:
-    shr     r2, r1, 23
-    mov     r3, 253
-    sub     r2, r3, r2
-    shl     r2, r2, 23
-    mov     r3, 0.5
-    shl     r1, r1, 9
-    shr     r1, r1, 9
-    or      r1, r1, r3
-    mov     r3, -1.8823529
-    mov     r4, 2.8235294
-    mov     r5, 2.0
-    fmul    r3, r1, r3
-    fadd    r3, r3, r4
-    fmul    r4, r1, r3
-    fsub    r4, r5, r4
-    fmul    r3, r3, r4
-    fmul    r4, r1, r3
-    fsub    r4, r5, r4
-    fmul    r3, r3, r4
-    fmul    r4, r1, r3
-    fsub    r4, r5, r4
-    fmul    r3, r3, r4
-    fmul    r1, r2, r3
-    ret
+# .global finv
+# finv:
+#     shr     r2, r1, 23
+#     mov     r3, 253
+#     sub     r2, r3, r2
+#     shl     r2, r2, 23
+#     mov     r3, 0.5
+#     shl     r1, r1, 9
+#     shr     r1, r1, 9
+#     or      r1, r1, r3
+#     mov     r3, -1.8823529
+#     mov     r4, 2.8235294
+#     mov     r5, 2.0
+#     fmul    r3, r1, r3
+#     fadd    r3, r3, r4
+#     fmul    r4, r1, r3
+#     fsub    r4, r5, r4
+#     fmul    r3, r3, r4
+#     fmul    r4, r1, r3
+#     fsub    r4, r5, r4
+#     fmul    r3, r3, r4
+#     fmul    r4, r1, r3
+#     fsub    r4, r5, r4
+#     fmul    r3, r3, r4
+#     fmul    r1, r2, r3
+#     ret
 
 
 # <library> square_root(x)
 # no check for negative number
-.global sqrt
-sqrt:
-    mov     r4, 0.5
-    mov     r5, 1.5
-    mov     r3, 0x5f375a86
-    shr     r2, r1, 1
-    sub     r2, r3, r2
-    fmul    r4, r1, r4
-    fmul    r3, r2, r4
-    fmul    r3, r2, r3
-    fsub    r3, r5, r3
-    fmul    r2, r2, r3
-    fmul    r3, r2, r4
-    fmul    r3, r2, r3
-    fsub    r3, r5, r3
-    fmul    r2, r2, r3
-    fmul    r3, r2, r4
-    fmul    r3, r2, r3
-    fsub    r3, r5, r3
-    fmul    r2, r2, r3
-    fmul    r1, r1, r2
-    ret
+# .global sqrt
+# sqrt:
+#     mov     r4, 0.5
+#     mov     r5, 1.5
+#     mov     r3, 0x5f375a86
+#     shr     r2, r1, 1
+#     sub     r2, r3, r2
+#     fmul    r4, r1, r4
+#     fmul    r3, r2, r4
+#     fmul    r3, r2, r3
+#     fsub    r3, r5, r3
+#     fmul    r2, r2, r3
+#     fmul    r3, r2, r4
+#     fmul    r3, r2, r3
+#     fsub    r3, r5, r3
+#     fmul    r2, r2, r3
+#     fmul    r3, r2, r4
+#     fmul    r3, r2, r3
+#     fsub    r3, r5, r3
+#     fmul    r2, r2, r3
+#     fmul    r1, r1, r2
+#     ret
 
 
 .set pi_q, 0x3f490fdb
@@ -230,7 +230,7 @@ atan_L1:
     mov     r2, 1.0
     fsub    r8, r1, r2
     fadd    r1, r1, r2
-    call    finv
+    finv    r1, r1
     fmul    r1, r1, r8
     call    kernel_atan
     mov     r2, pi_q
@@ -239,7 +239,7 @@ atan_L1:
     leave
     ret
 atan_L2:
-    call    finv
+    finv    r1, r1
     call    kernel_atan
     mov     r2, pi_h
     fsub    r1, r2, r1

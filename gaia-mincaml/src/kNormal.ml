@@ -11,6 +11,7 @@ type t =
   | Add of Id.t * var_or_imm | Sub of Id.t * var_or_imm
   | Shl of Id.t * int | Shr of Id.t * int
   | FNeg of Id.t | FAbs of Id.t
+  | FInv of Id.t | Sqrt of Id.t
   | FAdd of fpu_sign * Id.t * Id.t
   | FSub of fpu_sign * Id.t * Id.t
   | FMul of fpu_sign * Id.t * Id.t
@@ -44,7 +45,8 @@ let log2 i = let rec go n m = if m = i then n else go (n + 1) (m * 2) in go 0 1
 let rec fv = function
   | Unit | Int _ | Float _ | LoadL _ | ExtTuple _ | ExtArray _ -> S.empty
   | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _)
-  | FNeg x | FAbs x | IToF x | FToI x | Floor x | Load (x, _) | StoreL (x, _, _) -> S.singleton x
+  | FNeg x | FAbs x | FInv x | Sqrt x | IToF x | FToI x | Floor x
+  | Load (x, _) | StoreL (x, _, _) -> S.singleton x
   | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
   | Eq (x, y) | Ne (x, y) | Lt (x, y) | Le (x, y) | FLt (x, y) | FLe (x, y)
   | Store (x, y, _) -> S.of_list [x; y]
@@ -93,6 +95,8 @@ let rec g env = function
   | Syntax.Div _ -> failwith ("error: cannot divide by variable")
   | Syntax.FNeg e -> insert_let (g env e) (fun x -> (FNeg x, Type.Float))
   | Syntax.FAbs e -> insert_let (g env e) (fun x -> (FAbs x, Type.Float))
+  | Syntax.FInv e -> insert_let (g env e) (fun x -> (FInv x, Type.Float))
+  | Syntax.Sqrt e -> insert_let (g env e) (fun x -> (Sqrt x, Type.Float))
   | Syntax.FAdd (e1, e2) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2) (fun y -> (FAdd (Nop, x, y), Type.Float)))

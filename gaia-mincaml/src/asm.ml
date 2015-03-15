@@ -22,6 +22,8 @@ and exp =
   | Shr of Id.t * int
   | FNeg of Id.t
   | FAbs of Id.t
+  | FInv of Id.t
+  | Sqrt of Id.t
   | FAdd of fpu_sign * Id.t * Id.t
   | FSub of fpu_sign * Id.t * Id.t
   | FMul of fpu_sign * Id.t * Id.t
@@ -57,8 +59,8 @@ let allregs = Array.to_list regs
 
 let reg_sp = "$sp" (* stack pointer *)
 let reg_bp = "$bp" (* base pointer *)
-let reg_cl = regs.(Array.length regs - 1) (* closure address *)
-let reg_sw = regs.(Array.length regs - 2) (* temporary for swap *)
+(* let reg_cl = regs.(Array.length regs - 1) (* closure address *) *)
+let reg_sw = regs.(Array.length regs - 1) (* temporary for swap *)
 
 let is_reg x = (x.[0] = '$')
 
@@ -71,7 +73,8 @@ let rec remove_and_uniq xs = function
 let rec fv_exp = function
   | Nop | Li _ | Lf _ | MovL _ | LdL _ | Restore _ -> []
   | Mov x | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _)
-  | FNeg x | FAbs x | IToF x | FToI x | Floor x | Ld (x, _) | StL (x, _, _) | Save (x, _) -> [x]
+  | FNeg x | FAbs x | FInv x | Sqrt x | IToF x | FToI x | Floor x
+  | Ld (x, _) | StL (x, _, _) | Save (x, _) -> [x]
   | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
   | Eq (x, y) | Ne (x, y) | Lt (x, y) | Le (x, y) | FLt (x, y) | FLe (x, y) | St (x, y, _) -> [x; y]
   | IfEq (x, y, e1, e2) | IfNe (x, y, e1, e2) -> x :: y :: remove_and_uniq S.empty (fv e1 @ fv e2)

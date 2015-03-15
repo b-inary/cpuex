@@ -36,6 +36,8 @@ let rec deref_term = function
   | Div (e1, e2) -> Div (deref_term e1, deref_term e2)
   | FNeg e -> FNeg (deref_term e)
   | FAbs e -> FAbs (deref_term e)
+  | FInv e -> FInv (deref_term e)
+  | Sqrt e -> Sqrt (deref_term e)
   | FAdd (e1, e2) -> FAdd (deref_term e1, deref_term e2)
   | FSub (e1, e2) -> FSub (deref_term e1, deref_term e2)
   | FMul (e1, e2) -> FMul (deref_term e1, deref_term e2)
@@ -112,7 +114,7 @@ let rec g env e =
           unify Type.Int (g env e1);
           unify Type.Int (g env e2);
           Type.Int
-      | FNeg e | FAbs e | Floor e ->
+      | FNeg e | FAbs e | FInv e | Sqrt e | Floor e ->
           unify Type.Float (g env e);
           Type.Float
       | FAdd (e1, e2) | FSub (e1, e2) | FMul (e1, e2) ->

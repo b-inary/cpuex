@@ -32,7 +32,7 @@
 %token LPAREN
 %token RPAREN
 %token XOR
-%token FEQUAL FLESS FISPOS FISNEG FISZERO
+%token SQRT FEQUAL FLESS FISPOS FISNEG FISZERO
 %token FHALF FSQR FABS FNEG FTOI ITOF FLOOR
 %token EOF
 
@@ -92,7 +92,7 @@ exp:
 | exp PLUS_DOT exp          { FAdd ($1, $3) }
 | exp MINUS_DOT exp         { FSub ($1, $3) }
 | exp AST_DOT exp           { FMul ($1, $3) }
-| exp SLASH_DOT exp         { FMul ($1, App (Var "finv", [$3])) }
+| exp SLASH_DOT exp         { FMul ($1, FInv ($3)) }
 | LET IDENT EQUAL exp IN exp
     %prec prec_let          { Let (addtyp $2, $4, $6) }
 | LET REC fundef IN exp
@@ -110,6 +110,8 @@ exp:
     %prec prec_app          { Array ($2, $3) }
 | XOR simple_exp simple_exp
     %prec prec_app          { Ne ($2, $3) }
+| SQRT simple_exp
+    %prec prec_app          { Sqrt $2 }
 | FEQUAL simple_exp simple_exp
     %prec prec_app          { Eq ($2, $3) }
 | FLESS simple_exp simple_exp

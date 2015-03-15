@@ -4,7 +4,7 @@ type t =
   | Unit | Bool of bool | Int of int | Float of float
   | Not of t | Neg of t
   | Add of t * t | Sub of t * t | Mul of t * t | Div of t * t
-  | FNeg of t | FAbs of t
+  | FNeg of t | FAbs of t | FInv of t | Sqrt of t
   | FAdd of t * t | FSub of t * t | FMul of t * t
   | Eq of t * t | Ne of t * t | Lt of t * t | Le of t * t
   | FLt of t * t | FLe of t * t
