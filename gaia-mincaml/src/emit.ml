@@ -24,7 +24,7 @@ let locate x =
     | y :: zs -> List.map ((+) 4) (loc zs) in
   loc !stackmap
 
-let offset x = List.hd (locate x) + 4
+let offset x = List.hd (locate x)
 let stacksize () = List.length !stackmap * 4
 
 (* 関数呼び出しのために引数を並べ替える *)
@@ -43,22 +43,7 @@ let rec shuffle sw xys =
 type dest = Tail | NonTail of Id.t
 
 let lines = ref []
-let al fmt = kprintf (fun s -> lines := (s ^ "\n") :: !lines) fmt
-
-let rec print_rev oc = function
-  | [] -> ()
-  | l :: ls ->
-      print_rev oc ls;
-      if l = "pop stack\n" then begin
-        let sz = stacksize () in
-        if not !is_leaf_function then begin
-          fprintf oc "    leave\n";
-          fprintf oc "    add     rsp, rsp, %d\n" (sz + 4)
-        end else if sz > 0 then
-          fprintf oc "    add     rsp, rsp, %d\n" sz
-      end else if not (!is_leaf_function && l = "    leave\n") then
-        let l = String.map (fun c -> if c = '$' then 'r' else c) l in
-        fprintf oc "%s" l
+let al fmt = kprintf (fun s -> lines := s :: !lines) fmt
 
 let addr x y =
   if x = "$0" then
@@ -69,6 +54,21 @@ let addr x y =
     sprintf "[%s + %d]" x y
   else
     sprintf "[%s - %d]" x (-y)
+
+let rec print_rev oc = function
+  | [] -> ()
+  | l :: ls ->
+      print_rev oc ls;
+      if l = "leave" then begin
+        let sz = stacksize () in
+        if not !is_leaf_function then begin
+          fprintf oc "    mov     rbp, %s\n" (addr reg_sp sz);
+          fprintf oc "    add     rsp, rsp, %d\n" (sz + 4)
+        end else if sz > 0 then
+          fprintf oc "    add     rsp, rsp, %d\n" sz
+      end else
+        let l = String.map (fun c -> if c = '$' then 'r' else c) l in
+        fprintf oc "%s\n" l
 
 (* 命令列のアセンブリ生成 *)
 let rec g oc = function
@@ -126,28 +126,28 @@ and g' oc = function
   | (NonTail _, St (x, y, z))       -> al "    mov     %s, %s" (addr y z) x
   | (NonTail _, StL (x, Id.L y, z)) -> al "    mov     %s, %s" (addr y z) x
   | (NonTail _, Save (x, y)) when List.mem x allregs && not (S.mem y !stackset) ->
-      save y; al "    mov     %s, %s" (addr reg_bp (- (offset y))) x
+      save y; al "    mov     %s, %s" (addr reg_sp (offset y)) x
   | (NonTail _, Save (x, y)) -> assert (S.mem y !stackset); ()
   | (NonTail x, Restore y) ->
       assert (List.mem x allregs);
-      al "    mov     %s, %s" x (addr reg_bp (- (offset y)))
+      al "    mov     %s, %s" x (addr reg_sp (offset y))
   (* 末尾だったら計算結果を第一レジスタにセットしてret *)
   | (Tail, (Nop | St _ | StL _ | Save _ as exp)) ->
       g' oc (NonTail (Id.gentmp Type.Unit), exp);
-      al "    leave";
-      al "    ret"
+      al "leave";
+      al "    jr      rbp"
   | (Tail, (Li _ | Lf _ | Mov _ | MovL _ | Not _ | Neg _ | Add _ | Sub _ | Shl _ | Shr _ |
             FNeg _ | FAbs _ | FInv _ | Sqrt _ | FAdd _ | FSub _ | FMul _ | Eq _ | Ne _ | Lt _ | Le _ |
             FLt _ | FLe _ | IToF _ | FToI _ | Floor _ | Ld _ | LdL _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);
-      al "    leave";
-      al "    ret"
+      al "leave";
+      al "    jr      rbp"
   | (Tail, (Restore x as exp)) ->
       (match locate x with
         | [i] -> g' oc (NonTail (regs.(0)), exp)
         | _ -> assert false);
-      al "    leave";
-      al "    ret"
+      al "leave";
+      al "    jr      rbp"
   | (Tail, IfEq (x, y, e1, e2)) -> g'_tail_if oc x y e1 e2 "beq"
   | (Tail, IfNe (x, y, e1, e2)) -> g'_tail_if oc x y e1 e2 "bne"
   | (NonTail z, IfEq (x, y, e1, e2)) -> g'_non_tail_if oc (NonTail z) x y e1 e2 "beq"
@@ -163,7 +163,7 @@ and g' oc = function
 *)
   | (Tail, CallDir (Id.L x, ys)) ->
       g'_args oc [] ys;
-      al "pop stack";
+      al "leave";
       al "    br      %s" x
   | (NonTail a, CallCls (x, ys)) ->
       failwith "emit callcls"
@@ -178,7 +178,7 @@ and g' oc = function
   | (NonTail a, CallDir (Id.L x, ys)) ->
       is_leaf_function := false;
       g'_args oc [] ys;
-      al "    call    %s" x;
+      al "    jl      rbp, %s" x;
       if List.mem a allregs && a <> regs.(0) then
         al "    mov     %s, %s" a regs.(0)
 
@@ -222,9 +222,10 @@ let h oc { name = Id.L x; args = _; body = e; ret = _ } =
   lines := [];
   g oc (Tail, e);
   let sz = stacksize () in
-  if not !is_leaf_function then
-    fprintf oc "    enter   %d\n" sz
-  else if sz > 0 then
+  if not !is_leaf_function then begin
+    fprintf oc "    sub     rsp, rsp, %d\n" (sz + 4);
+    fprintf oc "    mov     %s, rbp\n" (addr reg_sp sz)
+  end else if sz > 0 then
     fprintf oc "    sub     rsp, rsp, %d\n" sz;
   print_rev oc !lines
 

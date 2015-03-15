@@ -14,13 +14,13 @@ read_float:
     add     r1, r1, r2
     add     r3, r3, r4
     add     r1, r1, r3
-    ret
+    jr      rbp
 
 # write 1byte
 .global print_char
 print_char:
     write   r1
-    ret
+    jr      rbp
 
 
 # <library> create_array(size, initial_value)
@@ -37,7 +37,7 @@ array_L1:
     bne     r3, r4, array_L1
     mov     r1, r3
 array_L2:
-    ret
+    jr      rbp
 
 
 # <library> inverse(x)
@@ -104,11 +104,12 @@ array_L2:
 # <library> sin(x)  [$5-9: reserved]
 .global sin
 sin:
-    enter
+    sub     rsp, rsp, 4
+    mov     [rsp], rbp
     shr     r2, r1, 31
     shl     r1, r1, 1
     shr     r1, r1, 1
-    call    reduction
+    jl      rbp, reduction
     mov     r3, pi_1
     mov     r4, pi_h
     blt     r1, r3, sin_L1
@@ -121,24 +122,26 @@ sin_L2:
     mov     r3, pi_q
     blt     r1, r3, sin_L3
     fsub    r1, r4, r1
-    call    kernel_cos
+    jl      rbp, kernel_cos
     br      sin_L4
 sin_L3:
-    call    kernel_sin
+    jl      rbp, kernel_sin
 sin_L4:
     shl     r2, r2, 31
     add     r1, r1, r2
-    leave
-    ret
+    mov     rbp, [rsp]
+    add     rsp, rsp, 4
+    jr      rbp
 
 # <library> cos(x)  [$5-9: reserved]
 .global cos
 cos:
-    enter
+    sub     rsp, rsp, 4
+    mov     [rsp], rbp
     mov     r2, 0
     shl     r1, r1, 1
     shr     r1, r1, 1
-    call    reduction
+    jl      rbp, reduction
     mov     r3, pi_1
     mov     r4, pi_h
     blt     r1, r3, cos_L1
@@ -152,15 +155,16 @@ cos_L2:
     mov     r3, pi_q
     blt     r1, r3, cos_L3
     fsub    r1, r4, r1
-    call    kernel_sin
+    jl      rbp, kernel_sin
     br      cos_L4
 cos_L3:
-    call    kernel_cos
+    jl      rbp, kernel_cos
 cos_L4:
     shl     r2, r2, 31
     add     r1, r1, r2
-    leave
-    ret
+    mov     rbp, [rsp]
+    add     rsp, rsp, 4
+    jr      rbp
 
 # reduction(x)  [$1, $5-9: available]
 reduction:
@@ -176,7 +180,7 @@ red_L2:
 red_L3:
     sub     r5, r5, r7
     bge     r5, r6, red_L2
-    ret
+    jr      rbp
 
 # kernel_sin(x)  [$1, $5-9: available]
 kernel_sin:
@@ -192,7 +196,7 @@ kernel_sin:
     fmul    r6, r5, r6
     fadd    r6, r6, r9
     fmul    r1, r1, r6
-    ret
+    jr      rbp
 
 # kernel_cos(x)  [$1, $5-9: available]
 kernel_cos:
@@ -207,23 +211,25 @@ kernel_cos:
     fadd    r5, r5, r7
     fmul    r5, r1, r5
     fadd    r1, r5, r8
-    ret
+    jr      rbp
 
 
 # <library> arctangent(x)
 .global atan
 atan:
-    enter
+    sub     rsp, rsp, 4
+    mov     [rsp], rbp
     shr     r9, r1, 31
     shl     r9, r9, 31
     shl     r1, r1, 1
     shr     r1, r1, 1
     mov     r2, 0.4375
     bge     r1, r2, atan_L1
-    call    kernel_atan
+    jl      rbp, kernel_atan
     or      r1, r1, r9
-    leave
-    ret
+    mov     rbp, [rsp]
+    add     rsp, rsp, 4
+    jr      rbp
 atan_L1:
     mov     r2, 2.4375
     bge     r1, r2, atan_L2
@@ -232,20 +238,22 @@ atan_L1:
     fadd    r1, r1, r2
     finv    r1, r1
     fmul    r1, r1, r8
-    call    kernel_atan
+    jl      rbp, kernel_atan
     mov     r2, pi_q
     fadd    r1, r1, r2
     or      r1, r1, r9
-    leave
-    ret
+    mov     rbp, [rsp]
+    add     rsp, rsp, 4
+    jr      rbp
 atan_L2:
     finv    r1, r1
-    call    kernel_atan
+    jl      rbp, kernel_atan
     mov     r2, pi_h
     fsub    r1, r2, r1
     or      r1, r1, r9
-    leave
-    ret
+    mov     rbp, [rsp]
+    add     rsp, rsp, 4
+    jr      rbp
 
 # kernel_atan(x)  [$8, $9: reserved]
 kernel_atan:
@@ -270,5 +278,5 @@ kernel_atan:
     fmul    r3, r2, r3
     fadd    r3, r3, r6
     fmul    r1, r1, r3
-    ret
+    jr      rbp
 

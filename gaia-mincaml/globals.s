@@ -127,7 +127,7 @@ heap_ptr:
 main:
     mov     r1, 1
     mov     r2, -1
-    call    create_array
+    jl      rbp, create_array
     mov     r2, 196
     mov     r3, and_net
 L1:
@@ -137,7 +137,7 @@ L1:
     bge     r2, 0, L1
     mov     r2, r1
     mov     r1, 1
-    call    create_array
+    jl      rbp, create_array
     mov     [or_net], r1
     # write   r1, "\xaa"
     mov     r1, min_caml_main
