@@ -9,17 +9,17 @@ bin/min-caml: src/
 	ocamlbuild src/main.native -no-links
 	cp -f _build/src/main.native $@
 
-bin/asm.py: toolchain/
-	# git submodule update --init
+bin/asm.py:
+	git submodule update --init
 	cp -f toolchain/asm.py $@
 
-bin/sim: toolchain/
+bin/sim:
 	$(MAKE) -C toolchain/
 	mv -f toolchain/sim $@
 
 PHONY: run
 run: min-rt.out bin/sim
-	./bin/sim -simple -stat min-rt.out < contest.bin > contest.ppm
+	./bin/sim -simple -stat -fpu-maswag min-rt.out < contest.bin > contest.ppm
 
 PHONY: clean
 clean:
