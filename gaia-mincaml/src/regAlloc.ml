@@ -45,7 +45,10 @@ let rec alloc dest cont regenv x t =
   let all =
     match t with
       | Type.Unit -> [] (* dummy *)
-      | _ -> allregs in
+      | _ ->
+          ["$10"; "$11"; "$12"; "$13"; "$14"; "$15"; "$16"; "$17"; "$18"; "$19";
+           "$20"; "$21"; "$22"; "$23"; "$24"; "$25"; "$26"; "$27";
+           "$1"; "$2"; "$3"; "$4"; "$5"; "$6"; "$7"; "$8"; "$9"; "$28"] in
   if all = [] then Alloc "$unit" else (* ad hoc *)
   if is_reg x then Alloc x else
   let free = fv cont in

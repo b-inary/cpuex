@@ -3,19 +3,19 @@ min-rt.out: min-rt.s bin/asm.py
 	./bin/asm.py -f_end_of_program -o $@ -v globals.s lib.s min-rt.s
 
 min-rt.s: min-rt.ml bin/min-caml
-	./bin/min-caml min-rt.ml -inline 160 -log 0
+	./bin/min-caml min-rt.ml -inline 170 -log 0
 
 bin/min-caml: src/
 	ocamlbuild src/main.native -no-links
 	cp -f _build/src/main.native $@
 
 bin/asm.py: toolchain/
-	git submodule update --init
+	# git submodule update --init
 	cp -f toolchain/asm.py $@
 
 bin/sim: toolchain/
 	$(MAKE) -C toolchain/
-	cp -f toolchain/sim $@
+	mv -f toolchain/sim $@
 
 PHONY: run
 run: min-rt.out bin/sim

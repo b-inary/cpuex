@@ -49,7 +49,7 @@ type prog = Prog of fundef list * t
 
 let seq (e1, e2) = Let ((Id.gentmp Type.Unit, Type.Unit), e1, e2)
 
-let regs = Array.init 27 (fun i -> Printf.sprintf "$%d" (i + 1))
+let regs = Array.init 28 (fun i -> Printf.sprintf "$%d" (i + 1))
 let allregs = Array.to_list regs
 
 let reg_sp = "rsp" (* stack pointer *)
