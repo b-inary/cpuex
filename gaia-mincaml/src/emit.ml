@@ -112,12 +112,9 @@ and g' oc = function
   | (NonTail x, FMul (Plus, y, z))  -> al "    fmul.abs %s, %s, %s" x y z
   | (NonTail x, FMul (Minus, y, z)) -> al "    fmul.abs.neg %s, %s, %s" x y z
   | (NonTail x, FMul (Inv, y, z))   -> al "    fmul.neg %s, %s, %s" x y z
-  | (NonTail x, Eq (y, z))      -> al "    cmpeq   %s, %s, %s" x y z
-  | (NonTail x, Ne (y, z))      -> al "    cmpne   %s, %s, %s" x y z
-  | (NonTail x, Lt (y, z))      -> al "    cmplt   %s, %s, %s" x y z
-  | (NonTail x, Le (y, z))      -> al "    cmple   %s, %s, %s" x y z
-  | (NonTail x, FLt (y, z))     -> al "    fcmplt  %s, %s, %s" x y z
-  | (NonTail x, FLe (y, z))     -> al "    fcmple  %s, %s, %s" x y z
+  | (NonTail x, Cmp (ins, y, V z))  -> al "    %-6s  %s, %s, %s" ins x y z
+  | (NonTail x, Cmp (ins, y, C 0))  -> al "    %-6s  %s, %s, $0" ins x y
+  | (NonTail x, Cmp (ins, y, C z))  -> al "    %-6s  %s, %s, %d" ins x y z
   | (NonTail x, IToF y)         -> al "    itof    %s, %s" x y
   | (NonTail x, FToI y)         -> al "    ftoi    %s, %s" x y
   | (NonTail x, Floor y)        -> al "    floor   %s, %s" x y
@@ -136,9 +133,9 @@ and g' oc = function
       g' oc (NonTail (Id.gentmp Type.Unit), exp);
       al "leave";
       al "    jr      rbp"
-  | (Tail, (Li _ | Lf _ | Mov _ | MovL _ | Not _ | Neg _ | Add _ | Sub _ | Shl _ | Shr _ |
-            FNeg _ | FAbs _ | FInv _ | Sqrt _ | FAdd _ | FSub _ | FMul _ | Eq _ | Ne _ | Lt _ | Le _ |
-            FLt _ | FLe _ | IToF _ | FToI _ | Floor _ | Ld _ | LdL _ as exp)) ->
+  | (Tail, (Li _ | Lf _ | Mov _ | MovL _ | Not _ | Neg _ | Add _ | Sub _ |
+            Shl _ | Shr _ | FNeg _ | FAbs _ | FInv _ | Sqrt _ | FAdd _ | FSub _ | FMul _ |
+            Cmp _ | IToF _ | FToI _ | Floor _ | Ld _ | LdL _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);
       al "leave";
       al "    jr      rbp"

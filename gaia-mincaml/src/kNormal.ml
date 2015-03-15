@@ -15,9 +15,7 @@ type t =
   | FAdd of fpu_sign * Id.t * Id.t
   | FSub of fpu_sign * Id.t * Id.t
   | FMul of fpu_sign * Id.t * Id.t
-  | Eq of Id.t * Id.t | Ne of Id.t * Id.t
-  | Lt of Id.t * Id.t | Le of Id.t * Id.t
-  | FLt of Id.t * Id.t | FLe of Id.t * Id.t
+  | Cmp of string * Id.t * var_or_imm
   | IToF of Id.t | FToI of Id.t | Floor of Id.t
   | IfEq of Id.t * Id.t * t * t | IfNe of Id.t * Id.t * t * t
   | IfZ of Id.t * t * t | IfNz of Id.t * t * t
@@ -44,11 +42,10 @@ let log2 i = let rec go n m = if m = i then n else go (n + 1) (m * 2) in go 0 1
 (* 式に出現する自由変数 *)
 let rec fv = function
   | Unit | Int _ | Float _ | LoadL _ | ExtTuple _ | ExtArray _ -> S.empty
-  | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _)
+  | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _) | Cmp (_, x, C _)
   | FNeg x | FAbs x | FInv x | Sqrt x | IToF x | FToI x | Floor x
   | Load (x, _) | StoreL (x, _, _) -> S.singleton x
-  | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
-  | Eq (x, y) | Ne (x, y) | Lt (x, y) | Le (x, y) | FLt (x, y) | FLe (x, y)
+  | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y) | Cmp (_, x, V y)
   | Store (x, y, _) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2) | IfNe (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | IfZ (x, e1, e2) | IfNz (x, e1, e2) -> S.add x (S.union (fv e1) (fv e2))
@@ -108,22 +105,22 @@ let rec g env = function
         (fun x -> insert_let (g env e2) (fun y -> (FMul (Nop, x, y), Type.Float)))
   | Syntax.Eq (e1, e2) ->
       insert_let (g env e1)
-        (fun x -> insert_let (g env e2) (fun y -> (Eq (x, y), Type.Int)))
+        (fun x -> insert_let (g env e2) (fun y -> (Cmp ("cmpeq", x, V y), Type.Int)))
   | Syntax.Ne (e1, e2) ->
       insert_let (g env e1)
-        (fun x -> insert_let (g env e2) (fun y -> (Ne (x, y), Type.Int)))
+        (fun x -> insert_let (g env e2) (fun y -> (Cmp ("cmpne", x, V y), Type.Int)))
   | Syntax.Lt (e1, e2) ->
       insert_let (g env e1)
-        (fun x -> insert_let (g env e2) (fun y -> (Lt (x, y), Type.Int)))
+        (fun x -> insert_let (g env e2) (fun y -> (Cmp ("cmplt", x, V y), Type.Int)))
   | Syntax.Le (e1, e2) ->
       insert_let (g env e1)
-        (fun x -> insert_let (g env e2) (fun y -> (Le (x, y), Type.Int)))
+        (fun x -> insert_let (g env e2) (fun y -> (Cmp ("cmple", x, V y), Type.Int)))
   | Syntax.FLt (e1, e2) ->
       insert_let (g env e1)
-        (fun x -> insert_let (g env e2) (fun y -> (FLt (x, y), Type.Int)))
+        (fun x -> insert_let (g env e2) (fun y -> (Cmp ("fcmplt", x, V y), Type.Int)))
   | Syntax.FLe (e1, e2) ->
       insert_let (g env e1)
-        (fun x -> insert_let (g env e2) (fun y -> (FLe (x, y), Type.Int)))
+        (fun x -> insert_let (g env e2) (fun y -> (Cmp ("fcmple", x, V y), Type.Int)))
   | Syntax.IToF e -> insert_let (g env e) (fun x -> (IToF x, Type.Float))
   | Syntax.FToI e -> insert_let (g env e) (fun x -> (FToI x, Type.Int))
   | Syntax.Floor e -> insert_let (g env e) (fun x -> (Floor x, Type.Float))

@@ -1,5 +1,5 @@
 
-type val_or_imm = V of Id.t | C of int
+type var_or_imm = V of Id.t | C of int
 type fpu_sign = Nop | Plus | Minus | Inv
 
 (* 命令の列 *)
@@ -16,8 +16,8 @@ and exp =
   | MovL of Id.l
   | Not of Id.t
   | Neg of Id.t
-  | Add of Id.t * val_or_imm
-  | Sub of Id.t * val_or_imm
+  | Add of Id.t * var_or_imm
+  | Sub of Id.t * var_or_imm
   | Shl of Id.t * int
   | Shr of Id.t * int
   | FNeg of Id.t
@@ -27,12 +27,7 @@ and exp =
   | FAdd of fpu_sign * Id.t * Id.t
   | FSub of fpu_sign * Id.t * Id.t
   | FMul of fpu_sign * Id.t * Id.t
-  | Eq of Id.t * Id.t
-  | Ne of Id.t * Id.t
-  | Lt of Id.t * Id.t
-  | Le of Id.t * Id.t
-  | FLt of Id.t * Id.t
-  | FLe of Id.t * Id.t
+  | Cmp of string * Id.t * var_or_imm
   | IToF of Id.t
   | FToI of Id.t
   | Floor of Id.t
@@ -72,11 +67,11 @@ let rec remove_and_uniq xs = function
 (* free variables in the order of use (for spilling) *)
 let rec fv_exp = function
   | Nop | Li _ | Lf _ | MovL _ | LdL _ | Restore _ -> []
-  | Mov x | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _)
+  | Mov x | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _) | Cmp (_, x, C _)
   | FNeg x | FAbs x | FInv x | Sqrt x | IToF x | FToI x | Floor x
   | Ld (x, _) | StL (x, _, _) | Save (x, _) -> [x]
   | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
-  | Eq (x, y) | Ne (x, y) | Lt (x, y) | Le (x, y) | FLt (x, y) | FLe (x, y) | St (x, y, _) -> [x; y]
+  | Cmp (_, x, V y) | St (x, y, _) -> [x; y]
   | IfEq (x, y, e1, e2) | IfNe (x, y, e1, e2) -> x :: y :: remove_and_uniq S.empty (fv e1 @ fv e2)
   | CallCls (x, ys) -> x :: ys
   | CallDir (_, ys) -> ys
