@@ -34,6 +34,7 @@ let rec deref_term = function
   | Sub (e1, e2) -> Sub (deref_term e1, deref_term e2)
   | Mul (e1, e2) -> Mul (deref_term e1, deref_term e2)
   | Div (e1, e2) -> Div (deref_term e1, deref_term e2)
+  | AddA _ -> failwith "Typing.deref_term: AddA"
   | FNeg e -> FNeg (deref_term e)
   | FAbs e -> FAbs (deref_term e)
   | FInv e -> FInv (deref_term e)
@@ -114,6 +115,8 @@ let rec g env e =
           unify Type.Int (g env e1);
           unify Type.Int (g env e2);
           Type.Int
+      | AddA _ ->
+          failwith "Typing.g AddA"
       | FNeg e | FAbs e | FInv e | Sqrt e | Floor e ->
           unify Type.Float (g env e);
           Type.Float

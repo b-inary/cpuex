@@ -94,6 +94,7 @@ and g' oc = function
   | (NonTail x, Sub (y, V z))   -> al "    sub     %s, %s, %s" x y z
   | (NonTail x, Sub (y, C z)) when z = 0 -> g' oc (NonTail x, Mov y)
   | (NonTail x, Sub (y, C z))   -> al "    sub     %s, %s, %d" x y z
+  | (NonTail x, AddA (y, z))    -> al "    adda    %s, %s, %s" x y z
   | (NonTail x, Shl (y, z))     -> al "    shl     %s, %s, %d" x y z
   | (NonTail x, Shr (y, z))     -> al "    shr     %s, %s, %d" x y z
   | (NonTail x, FNeg y)         -> al "    fadd.neg %s, %s, $0" x y
@@ -133,7 +134,7 @@ and g' oc = function
       g' oc (NonTail (Id.gentmp Type.Unit), exp);
       al "leave";
       al "    jr      rbp"
-  | (Tail, (Li _ | Lf _ | Mov _ | MovL _ | Not _ | Neg _ | Add _ | Sub _ |
+  | (Tail, (Li _ | Lf _ | Mov _ | MovL _ | Not _ | Neg _ | Add _ | Sub _ | AddA _ |
             Shl _ | Shr _ | FNeg _ | FAbs _ | FInv _ | Sqrt _ | FAdd _ | FSub _ | FMul _ |
             Cmp _ | IToF _ | FToI _ | Floor _ | Ld _ | LdL _ as exp)) ->
       g' oc (NonTail (regs.(0)), exp);

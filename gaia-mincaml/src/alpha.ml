@@ -16,6 +16,7 @@ let rec g env = function
   | Add (x, C y) -> Add (find x env, C y)
   | Sub (x, V y) -> Sub (find x env, V (find y env))
   | Sub (x, C y) -> Sub (find x env, C y)
+  | AddA (x, y) -> AddA (find x env, find y env)
   | Shl (x, y) -> Shl (find x env, y)
   | Shr (x, y) -> Shr (find x env, y)
   | FNeg x -> FNeg (find x env)

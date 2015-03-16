@@ -126,6 +126,7 @@ and g' dest cont regenv = function
   | Add (x, C y) -> (Ans (Add (find x regenv, C y)), regenv)
   | Sub (x, V y) -> (Ans (Sub (find x regenv, V (find y regenv))), regenv)
   | Sub (x, C y) -> (Ans (Sub (find x regenv, C y)), regenv)
+  | AddA (x, y) -> (Ans (AddA (find x regenv, find y regenv)), regenv)
   | Shl (x, y) -> (Ans (Shl (find x regenv, y)), regenv)
   | Shr (x, y) -> (Ans (Shr (find x regenv, y)), regenv)
   | FNeg x -> (Ans (FNeg (find x regenv)), regenv)

@@ -88,6 +88,7 @@ let rec g env = function
         | _ -> e
       with Not_found -> e end
   | Sub (x, V y) when memi y env -> Sub (x, C (findi y env))
+  | AddA (x, y) when memi y env -> Add (x, C (4 * findi y env))
   | Shl (x, y) when memi x env -> Int (findi x env lsl y)
   | Shr (x, y) when memi x env -> Int (findi x env lsr y)
   | FNeg x as e ->

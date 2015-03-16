@@ -3,7 +3,7 @@ min-rt.out: min-rt.s bin/asm.py
 	./bin/asm.py -f_end_of_program -o $@ -v globals.s lib.s min-rt.s
 
 min-rt.s: min-rt.ml bin/min-caml
-	./bin/min-caml min-rt.ml -inline 170 -log 0
+	./bin/min-caml min-rt.ml -inline 160 -log 0
 
 bin/min-caml: src/
 	ocamlbuild src/main.native -no-links

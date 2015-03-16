@@ -9,6 +9,7 @@ type t =
   | Unit | Int of int | Float of float
   | Not of Id.t | Neg of Id.t
   | Add of Id.t * var_or_imm | Sub of Id.t * var_or_imm
+  | AddA of Id.t * Id.t
   | Shl of Id.t * int | Shr of Id.t * int
   | FNeg of Id.t | FAbs of Id.t
   | FInv of Id.t | Sqrt of Id.t
@@ -45,8 +46,8 @@ let rec fv = function
   | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _) | Cmp (_, x, C _)
   | FNeg x | FAbs x | FInv x | Sqrt x | IToF x | FToI x | Floor x
   | Load (x, _) | StoreL (x, _, _) -> S.singleton x
-  | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y) | Cmp (_, x, V y)
-  | Store (x, y, _) -> S.of_list [x; y]
+  | Add (x, V y) | Sub (x, V y) | AddA (x, y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
+  | Cmp (_, x, V y) | Store (x, y, _) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2) | IfNe (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | IfZ (x, e1, e2) | IfNz (x, e1, e2) -> S.add x (S.union (fv e1) (fv e2))
   | Let ((x, t), e1, e2) -> S.union (fv e1) (S.remove x (fv e2))
@@ -81,6 +82,9 @@ let rec g env = function
   | Syntax.Sub (e1, e2) ->
       insert_let (g env e1)
         (fun x -> insert_let (g env e2) (fun y -> (Sub (x, V y), Type.Int)))
+  | Syntax.AddA (e1, e2) ->
+      insert_let (g env e1)
+        (fun x -> insert_let (g env e2) (fun y -> (AddA (x, y), Type.Int)))
   | Syntax.Mul (e1, Syntax.Int i) ->
       if is_pow2 i then insert_let (g env e1) (fun x -> (Shl (x, (log2 i)), Type.Int)) else
       failwith (Printf.sprintf "error: multiply: %d is not power of 2" i)
@@ -146,16 +150,17 @@ let rec g env = function
       let e1', t1 = g (M.add_list yts env') e1 in
       (LetRec ({ name = (x, t); args = yts; body = e1' }, e2'), t2)
   | Syntax.App (Syntax.Var f, e2s) when not (M.mem f env) ->
-      (match M.find f !Typing.extenv with
+      begin match M.find f !Typing.extenv with
         | Type.Fun (_, t) ->
             let rec bind xs = function
               | [] -> (ExtFunApp (f, xs), t)
               | e2 :: e2s ->
                   insert_let (g env e2) (fun x -> bind (xs @ [x]) e2s) in
             bind [] e2s
-        | _ -> assert false)
+        | _ -> assert false
+      end
   | Syntax.App (e1, e2s) ->
-      (match g env e1 with
+      begin match g env e1 with
         | (_, Type.Fun (_, t)) as g_e1 ->
             insert_let g_e1
               (fun f ->
@@ -164,7 +169,8 @@ let rec g env = function
                   | e2 :: e2s ->
                       insert_let (g env e2) (fun x -> bind (xs @ [x]) e2s) in
                 bind [] e2s)
-        | _ -> assert false)
+        | _ -> assert false
+      end
   | Syntax.Tuple es ->
       let rec bind xs ts = function
         | [] -> (Tuple xs, Type.Tuple ts)
@@ -182,12 +188,13 @@ let rec g env = function
           let (_, t2) as g_e2 = g env e2 in
           insert_let g_e2 (fun y -> (ExtFunApp ("create_array", [x; y]), Type.Array t2)))
   | Syntax.Get (e1, e2) ->
-      (match g env e1 with
+      begin match g env e1 with
         | (_, Type.Array t) ->
-            insert_let (g env (Syntax.Add (e1, Syntax.Mul (e2, Syntax.Int 4)))) (fun x -> (Load (x, 0), t))
-        | _ -> assert false)
+            insert_let (g env (Syntax.AddA (e1, e2))) (fun x -> (Load (x, 0), t))
+        | _ -> assert false
+      end
   | Syntax.Put (e1, e2, e3) ->
-      insert_let (g env (Syntax.Add (e1, Syntax.Mul (e2, Syntax.Int 4))))
+      insert_let (g env (Syntax.AddA (e1, e2)))
         (fun x -> insert_let (g env e3) (fun y -> (Store (y, x, 0), Type.Unit)))
 
 let f e = fst (g M.empty e)

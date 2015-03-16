@@ -18,6 +18,7 @@ and exp =
   | Neg of Id.t
   | Add of Id.t * var_or_imm
   | Sub of Id.t * var_or_imm
+  | AddA of Id.t * Id.t
   | Shl of Id.t * int
   | Shr of Id.t * int
   | FNeg of Id.t
@@ -70,7 +71,7 @@ let rec fv_exp = function
   | Mov x | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _) | Cmp (_, x, C _)
   | FNeg x | FAbs x | FInv x | Sqrt x | IToF x | FToI x | Floor x
   | Ld (x, _) | StL (x, _, _) | Save (x, _) -> [x]
-  | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
+  | Add (x, V y) | Sub (x, V y) | AddA (x, y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
   | Cmp (_, x, V y) | St (x, y, _) -> [x; y]
   | IfEq (x, y, e1, e2) | IfNe (x, y, e1, e2) -> x :: y :: remove_and_uniq S.empty (fv e1 @ fv e2)
   | CallCls (x, ys) -> x :: ys

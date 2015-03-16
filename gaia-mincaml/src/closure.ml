@@ -9,6 +9,7 @@ type t =
   | Unit | Int of int | Float of float
   | Not of Id.t | Neg of Id.t
   | Add of Id.t * var_or_imm | Sub of Id.t * var_or_imm
+  | AddA of Id.t * Id.t
   | Shl of Id.t * int | Shr of Id.t * int
   | FNeg of Id.t | FAbs of Id.t
   | FInv of Id.t | Sqrt of Id.t
@@ -46,7 +47,7 @@ let rec fv = function
   | Not x | Neg x | Add (x, C _) | Sub (x, C _) | Shl (x, _) | Shr (x, _) | Cmp (_, x, C _)
   | FNeg x | FAbs x | FInv x | Sqrt x | IToF x | FToI x | Floor x
   | Load (x, _) | Var x | StoreL (x, _, _) -> S.singleton x
-  | Add (x, V y) | Sub (x, V y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
+  | Add (x, V y) | Sub (x, V y) | AddA (x, y) | FAdd (_, x, y) | FSub (_, x, y) | FMul (_, x, y)
   | Cmp (_, x, V y) | Store (x, y, _) -> S.of_list [x; y]
   | IfEq (x, y, e1, e2) | IfNe (x, y, e1, e2) -> S.add x (S.add y (S.union (fv e1) (fv e2)))
   | IfZ (x, e1, e2) | IfNz (x, e1, e2) -> S.add x (S.union (fv e1) (fv e2))
@@ -75,6 +76,7 @@ let rec g env known = function
   | KNormal.Add (x, KNormal.C y) -> Add (x, C y)
   | KNormal.Sub (x, KNormal.V y) -> Sub (x, V y)
   | KNormal.Sub (x, KNormal.C y) -> Sub (x, C y)
+  | KNormal.AddA (x, y) -> AddA (x, y)
   | KNormal.Shl (x, y) -> Shl (x, y)
   | KNormal.Shr (x, y) -> Shr (x, y)
   | KNormal.FNeg x -> FNeg x

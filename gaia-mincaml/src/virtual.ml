@@ -26,6 +26,7 @@ let rec g env = function
   | Closure.Add (x, Closure.C y) -> Ans (Add (x, C y))
   | Closure.Sub (x, Closure.V y) -> Ans (Sub (x, V y))
   | Closure.Sub (x, Closure.C y) -> Ans (Sub (x, C y))
+  | Closure.AddA (x, y) -> Ans (AddA (x, y))
   | Closure.Shl (x, y) -> Ans (Shl (x, y))
   | Closure.Shr (x, y) -> Ans (Shr (x, y))
   | Closure.FNeg x -> Ans (FNeg x)
